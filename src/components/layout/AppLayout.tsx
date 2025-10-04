@@ -1,6 +1,6 @@
 import { useCallback, useMemo, useState, type MouseEvent as ReactMouseEvent } from "react";
 import { useLocation, useNavigate } from "react-router-dom";
-import { LayoutDashboard, Orbit, PieChart, Sparkles, Table2 } from "lucide-react";
+import { LayoutDashboard, Orbit, PieChart, Sparkles, Table2, Columns3 } from "lucide-react";
 import type { ReactNode } from "react";
 import { Sidebar, type NavItem } from "./Sidebar";
 
@@ -22,6 +22,12 @@ const navigation: NavItem[] = [
     path: "/orbit",
     icon: Orbit,
     description: "Transit preview"
+  },
+  {
+    title: "Compare",
+    path: "/compare",
+    icon: Columns3,
+    description: "Side-by-side planets"
   },
   {
     title: "Analytics",

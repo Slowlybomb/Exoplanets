@@ -5,6 +5,7 @@ import Gallery from "./pages/Gallery";
 import OrbitLab from "./pages/OrbitLab";
 import Analytics from "./pages/Analytics";
 import PlanetDetail from "./pages/PlanetDetail";
+import Compare from "./pages/Compare";
 
 function App(): JSX.Element {
   return (
@@ -15,6 +16,7 @@ function App(): JSX.Element {
           <Route path="/overview" element={<Overview />} />
           <Route path="/gallery" element={<Gallery />} />
           <Route path="/orbit" element={<OrbitLab />} />
+          <Route path="/compare" element={<Compare />} />
           <Route path="/analytics" element={<Analytics />} />
           <Route path="/planet/:name" element={<PlanetDetail />} />
         </Routes>
