@@ -1,5 +1,5 @@
 import { useMemo, useState } from "react";
-import { ArrowsLeftRight } from "lucide-react";
+import { ArrowLeftRight } from "lucide-react";
 import { Card } from "../components/ui/Card";
 import { OrbitSimulation } from "../components/orbit/OrbitSimulation";
 import {
@@ -233,7 +233,7 @@ export default function Compare(): JSX.Element {
             className="mt-4 inline-flex h-10 w-10 items-center justify-center rounded-full border border-brand-slate/40 bg-brand-indigo/40 text-brand-slate/70 transition hover:border-brand-accent hover:text-brand-accent md:mt-0"
             aria-label="Swap planets"
           >
-            <ArrowsLeftRight className="h-4 w-4" />
+            <ArrowLeftRight className="h-4 w-4" />
           </button>
           <PlanetSelect planets={planets} label="Planet B" value={rightPlanetName} onChange={setRightPlanetName} />
         </div>

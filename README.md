@@ -45,7 +45,7 @@ npm run preview
 
 ## Project Structure
 ```
-NASA_HACKTOHON/
+Exoplanets/
 ├── dataset/
 │   └── cumulative_2025.10.04_06.46.42.csv   # NASA Exoplanet Archive KOI release (2025-10-04)
 ├── index.html                               # Vite entry point
