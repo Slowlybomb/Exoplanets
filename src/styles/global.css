@@ -1,3 +1,5 @@
+@import url("https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500;600;700&display=swap");
+
 @tailwind base;
 @tailwind components;
 @tailwind utilities;
@@ -8,7 +10,7 @@
   }
 
   body {
-    @apply m-0 min-h-screen bg-brand-midnight text-brand-white font-sans;
+    @apply m-0 min-h-screen bg-brand-midnight font-sans text-brand-white;
     background-image:
       radial-gradient(circle at top, rgba(237, 131, 53, 0.12), transparent 55%),
       radial-gradient(circle at bottom right, rgba(100, 118, 132, 0.18), transparent 45%),
@@ -22,10 +24,10 @@
 
 @layer components {
   .glass-card {
-    @apply rounded-2xl border border-brand-slate/30 bg-brand-indigo/70 p-6 shadow-card-glow backdrop-blur;
+    @apply rounded-2xl border border-brand-slate/30 bg-brand-indigo/70 p-5 shadow-card-glow backdrop-blur sm:p-6;
   }
 
   .grid-section {
-    @apply grid gap-6 md:grid-cols-2 xl:grid-cols-3;
+    @apply grid gap-5 sm:gap-6 md:grid-cols-2 xl:grid-cols-3;
   }
 }

@@ -6,6 +6,7 @@ import type { FeaturedPlanet } from "../../data/exoplanets";
 
 type OrbitSimulationProps = {
   planet: FeaturedPlanet;
+  starTemperatureKOverride?: number | null;
 };
 
 type OrbitingPlanetProps = {
@@ -119,8 +120,11 @@ function OrbitingPlanet({ orbitalRadius, planetRadius, periodDays }: OrbitingPla
   );
 }
 
-export function OrbitSimulation({ planet }: OrbitSimulationProps): JSX.Element {
-  const starColor = useMemo(() => sampleStarColor(planet.stellarEffectiveTempK), [planet.stellarEffectiveTempK]);
+export function OrbitSimulation({ planet, starTemperatureKOverride }: OrbitSimulationProps): JSX.Element {
+  const starColor = useMemo(
+    () => sampleStarColor(starTemperatureKOverride ?? planet.stellarEffectiveTempK),
+    [planet.stellarEffectiveTempK, starTemperatureKOverride]
+  );
 
   const orbitalRadius = useMemo(() => {
     const axis = planet.semiMajorAxisAu;

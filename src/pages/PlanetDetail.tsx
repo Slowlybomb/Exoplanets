@@ -39,7 +39,7 @@ export default function PlanetDetail(): JSX.Element {
 
   if (!planetDetail) {
     return (
-      <main className="flex w-full flex-col gap-6 px-6 py-16 sm:px-8 lg:px-12">
+      <main className="mx-auto flex w-full max-w-5xl flex-col gap-6 px-4 py-16 sm:px-6 lg:px-10">
         <button
           type="button"
           onClick={() => navigate(-1)}
@@ -64,7 +64,7 @@ export default function PlanetDetail(): JSX.Element {
   }
 
   return (
-    <main className="flex w-full flex-col gap-10 px-6 py-12 sm:px-8 lg:px-12">
+    <main className="mx-auto flex w-full max-w-5xl flex-col gap-10 px-4 py-12 sm:px-6 lg:px-10">
       <div className="flex items-center justify-between gap-4">
         <button
           type="button"

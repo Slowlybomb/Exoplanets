@@ -133,7 +133,7 @@ export default function Overview(): JSX.Element {
   const candidateFraction = ((exoplanetSummaryStats.candidateCount / exoplanetSummaryStats.totalCatalogued) * 100).toFixed(1);
 
   return (
-    <main className="flex w-full flex-col gap-10 px-6 py-10 sm:px-8 sm:py-12 lg:px-12 lg:py-16">
+    <main className="mx-auto flex w-full max-w-6xl flex-col gap-10 px-4 py-10 sm:px-6 sm:py-12 lg:px-10 lg:py-16">
       <header className="flex flex-col gap-6 lg:flex-row lg:items-end lg:justify-between">
         <div className="space-y-3">
           <span className="inline-flex items-center gap-2 rounded-full border border-brand-slate/40 bg-brand-indigo/60 px-3 py-1 text-xs font-semibold uppercase tracking-[0.4em] text-brand-slate/70">

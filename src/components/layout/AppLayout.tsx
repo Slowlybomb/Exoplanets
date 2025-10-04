@@ -98,7 +98,6 @@ export function AppLayout({ children }: AppLayoutProps): JSX.Element {
           items={navigation}
           activePath={activePath}
           onSelect={handleSelect}
-          footer={<p>KOI explorer prototype · Node 18 · Tailwind UI</p>}
           collapsed={collapsed}
           width={sidebarWidth}
           onToggleCollapse={() => setCollapsed((prev) => !prev)}

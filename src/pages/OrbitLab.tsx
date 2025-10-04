@@ -31,7 +31,9 @@ export default function OrbitLab(): JSX.Element {
     return all.slice(0, 20);
   }, []);
 
-  const [selectedPlanet, setSelectedPlanet] = useState<FeaturedPlanet | null>(() => seededPlanet ?? planets[0] ?? null);
+  const initialPlanet = seededPlanet ?? planets[0] ?? null;
+  const [selectedPlanet, setSelectedPlanet] = useState<FeaturedPlanet | null>(() => initialPlanet);
+  const [starTemperatureK, setStarTemperatureK] = useState<number>(() => initialPlanet?.stellarEffectiveTempK ?? 5778);
 
   useEffect(() => {
     if (seededPlanet) {
@@ -39,8 +41,14 @@ export default function OrbitLab(): JSX.Element {
     }
   }, [seededPlanet]);
 
+  useEffect(() => {
+    if (selectedPlanet) {
+      setStarTemperatureK(selectedPlanet.stellarEffectiveTempK ?? 5778);
+    }
+  }, [selectedPlanet]);
+
   return (
-    <main className="flex w-full flex-col gap-8 px-6 py-10 sm:px-8 sm:py-12 lg:px-12 lg:py-16">
+    <main className="mx-auto flex w-full max-w-6xl flex-col gap-8 px-4 py-10 sm:px-6 sm:py-12 lg:px-10 lg:py-16">
       <header className="space-y-3">
         <span className="inline-flex items-center gap-2 rounded-full border border-brand-slate/40 bg-brand-indigo/60 px-3 py-1 text-xs font-semibold uppercase tracking-[0.4em] text-brand-slate/70">
           Interactive Lab
@@ -64,7 +72,33 @@ export default function OrbitLab(): JSX.Element {
                 Orbital speed reflects the KOI period. Use this visualization during demos or integrate the component to showcase AI
                 detections.
               </p>
-              <OrbitSimulation planet={selectedPlanet} />
+              <div className="mt-4 space-y-3 rounded-2xl border border-brand-slate/30 bg-brand-indigo/40 p-4">
+                <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
+                  <p className="text-xs uppercase tracking-[0.3em] text-brand-slate/60">Star Temperature Control</p>
+                  <span className="text-sm font-semibold text-brand-white">{Math.round(starTemperatureK)} K</span>
+                </div>
+                <input
+                  type="range"
+                  min={3000}
+                  max={30000}
+                  step={100}
+                  value={starTemperatureK}
+                  onChange={(event) => setStarTemperatureK(Number(event.target.value))}
+                  className="w-full accent-brand-accent"
+                />
+                <div className="flex flex-wrap items-center justify-between gap-2 text-xs text-brand-slate/60">
+                  <span>3,000 K</span>
+                  <button
+                    type="button"
+                    className="rounded-full border border-brand-slate/40 px-3 py-1 text-xs font-semibold uppercase tracking-[0.2em] text-brand-slate/70 transition hover:border-brand-accent hover:text-brand-accent"
+                    onClick={() => setStarTemperatureK(selectedPlanet.stellarEffectiveTempK ?? 5778)}
+                  >
+                    Reset to host
+                  </button>
+                  <span>30,000 K</span>
+                </div>
+              </div>
+              <OrbitSimulation planet={selectedPlanet} starTemperatureKOverride={starTemperatureK} />
             </>
           ) : (
             <p>Select a planet from the list to preview its orbit.</p>
@@ -72,12 +106,13 @@ export default function OrbitLab(): JSX.Element {
         </Card>
 
         <Card title="Select a world" description="Top KOIs by score" className="space-y-4">
-          <ul className="space-y-3 text-sm text-brand-slate/70">
-            {planets.map((planet) => {
-              const isActive = selectedPlanet?.name === planet.name;
-              return (
-                <li key={planet.name}>
-                  <button
+          <div className="max-h-80 overflow-y-auto pr-1">
+            <ul className="space-y-3 text-sm text-brand-slate/70">
+              {planets.map((planet) => {
+                const isActive = selectedPlanet?.name === planet.name;
+                return (
+                  <li key={planet.name}>
+                    <button
                     type="button"
                     onClick={() => setSelectedPlanet(planet)}
                     className={`flex w-full items-center justify-between rounded-2xl border px-4 py-3 text-left transition ${
@@ -91,10 +126,11 @@ export default function OrbitLab(): JSX.Element {
                       {planet.periodDays?.toFixed(1) ?? "—"} d · {planet.planetRadiusEarth?.toFixed(1) ?? "—"} R⊕
                     </span>
                   </button>
-                </li>
-              );
-            })}
-          </ul>
+                  </li>
+                );
+              })}
+            </ul>
+          </div>
           {selectedPlanet ? (
             <button
               type="button"
