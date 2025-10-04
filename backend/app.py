@@ -6,10 +6,18 @@ from pathlib import Path
 
 from flask import Flask, jsonify, render_template, request
 from flask_cors import CORS
+<<<<<<< HEAD
+=======
+import pickle
+import joblib
+import json
+import numpy as np
+>>>>>>> d724f7f (Backened linked with frontend and model, cleanup code and make the data display pretty)
 
 app = Flask(__name__)
 CORS(app)
 
+<<<<<<< HEAD
 SAMPLE_PATH = Path(__file__).with_name("test_data.json")
 MODEL_PARAMS_PATH = Path(__file__).with_name("lightweight_model.json")
 
@@ -150,11 +158,16 @@ def load_batch_from_file(file_storage) -> list[dict]:
 
     raise ValueError("Unsupported file type. Upload a .json or .csv file.")
 
+=======
+# Load model
+model = joblib.load('model_test_1.joblib')
+>>>>>>> d724f7f (Backened linked with frontend and model, cleanup code and make the data display pretty)
 
 @app.route("/")
 def mainpage():
     return render_template("index.html")
 
+<<<<<<< HEAD
 
 @app.route("/exoplanet", methods=["GET", "POST"])
 def exoplanet():
@@ -193,3 +206,15 @@ def exoplanet():
 
 if __name__ == "__main__":
     app.run(debug=True)
+=======
+@app.route("/exoplanet")
+def exoplanet():
+    #data = request.get_json()
+    with open("test_data.json", "r") as f: data = json.load(f)
+    feature_order = list(data.keys())
+    features = np.array([list(data.values())])
+    #print(features.shape)
+    prediction = model.predict(features)[0]
+    return jsonify({"prediction": int(prediction), "features": data})
+    #eturn render_template("index.html")
+>>>>>>> d724f7f (Backened linked with frontend and model, cleanup code and make the data display pretty)

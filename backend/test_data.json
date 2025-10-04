@@ -1,4 +1,8 @@
 {
+<<<<<<< HEAD
+=======
+  "koi_score": 1.000,
+>>>>>>> d724f7f (Backened linked with frontend and model, cleanup code and make the data display pretty)
   "koi_period": 9.488036,
   "koi_period_err1": 0.00002775,
   "koi_period_err2": -0.00002775,
@@ -29,6 +33,10 @@
   "koi_slogg": 4.467,
   "koi_slogg_err1": 0.064,
   "koi_slogg_err2": -0.096,
+<<<<<<< HEAD
+=======
+  "koi_srad": 0.927,
+>>>>>>> d724f7f (Backened linked with frontend and model, cleanup code and make the data display pretty)
   "koi_srad_err1": 0.105,
   "koi_srad_err2": -0.061,
   "ra": 291.93423
