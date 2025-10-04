@@ -21,9 +21,7 @@ def mainpage():
 def exoplanet():
     #data = request.get_json()
     with open("test_data.json", "r") as f: data = json.load(f)
-    feature_order = list(data.keys())
     features = np.array([list(data.values())])
-    #print(features.shape)
     prediction = model.predict(features)[0]
     return jsonify({"prediction": int(prediction), "features": data})
     #eturn render_template("index.html")
