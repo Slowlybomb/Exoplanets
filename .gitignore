@@ -29,4 +29,4 @@ coverage/
 *.local
 
 # pycache
-backend/__pycache__
+backend/__pycache__/
