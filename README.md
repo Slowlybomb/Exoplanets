@@ -1,6 +1,6 @@
 # Exoplanets Finder AI
 
-Interactive dashboard for exploring NASA Exoplanet Archive KOI statistics with a streamlined Tailwind CSS UI. The front-end is built with Vite, React, and TypeScript; CSV data is parsed with `d3-dsv`, rendered as insight cards, ranked tables, and a 3D orbit preview powered by react-three-fiber.
+Interactive dashboard for exploring NASA Exoplanet Archive KOI statistics—"KOI" stands for *Kepler Object of Interest*, a star system where NASA's Kepler telescope spotted something that might be a planet. The front-end is built with Vite, React, and TypeScript; CSV data is parsed with `d3-dsv`, rendered as insight cards, ranked tables, and a 3D orbit preview powered by react-three-fiber.
 
 ## Prerequisites
 - Node.js 18 or newer (ships with npm 9+). Use [`nvm`](https://github.com/nvm-sh/nvm) or [`fnm`](https://github.com/Schniz/fnm) if you manage multiple versions.
@@ -70,21 +70,29 @@ NASA_HACKTOHON/
 ```
 
 ## Data & Views
-- `src/data/exoplanets.ts` ingests the KOI CSV (via Vite `?raw` import) with `d3-dsv`, computes disposition counts, summary statistics, and ranked planet lists.
+- `src/data/exoplanets.ts` ingests the KOI CSV (via Vite `?raw` import) with `d3-dsv`, computes disposition counts (how NASA currently classifies each potential planet), summary statistics, and ranked planet lists.
 - The app is split across dedicated views:
-  - `/overview` — mission summary, KPI cards, and quick links.
+  - `/overview` — mission summary, KPI (key performance indicator) cards, and quick links.
   - `/gallery` — poster-style cards with procedurally generated art and navigation to detail pages.
-  - `/orbit` — interactive react-three-fiber transit preview with a selectable planet list.
-  - `/analytics` — disposition breakdowns and ranking tables for confirmed worlds and candidates.
+  - `/orbit` — interactive react-three-fiber transit preview; a *transit* is when a planet crosses in front of its star and briefly dims the starlight.
+  - `/analytics` — disposition breakdowns and ranking tables showing confirmed worlds and candidates side-by-side.
 - Additional highlights:
   - Persistent sidebar navigation (desktop) and responsive top tabs for quick jumps between sections.
-  - Metric cards for catalog totals, confirmations, candidates, and temperate small worlds.
+  - Metric cards for catalog totals, confirmations (worlds NASA is confident are real), candidates (still being checked), and temperate small worlds (roughly Earth-sized planets in the not-too-hot/not-too-cold zone).
   - A planet gallery that generates poster-style cards with procedurally textured art, key metrics, and orbit shortcuts.
   - A 3D orbit simulation card that animates the leading confirmed KOI using react-three-fiber and drei.
   - Disposition breakdown chips with absolute counts and percentages.
   - Ranked tables for the highest scoring confirmed planets and KOI candidates.
 - Each planet card links to a dedicated `/planet/:name` page with a hero orbit preview, stellar context, and recommendations for nearby discoveries.
 - Replace the CSV in `dataset/` with a newer download to refresh the interface automatically.
+
+## Astrophysics Terms Explained
+- **Exoplanet**: A planet that orbits a star outside our solar system.
+- **KOI (Kepler Object of Interest)**: Star system flagged by the Kepler telescope because its light briefly dimmed, hinting that a planet might be passing in front of the star.
+- **Disposition**: NASA’s status label for a KOI—"confirmed" means follow-up analysis shows the signal is a real planet, "candidate" means promising but not yet verified, and "false positive" means the signal came from something else (for example, a nearby star).
+- **Transit**: The moment an exoplanet moves between its star and the telescope, causing a small, temporary dip in brightness. Measuring these dips reveals planet size and orbit.
+- **Habitable/temperate zone**: The range of orbits where a planet could have liquid water on the surface; this depends on the star’s temperature and brightness.
+- **Light curve**: A graph of how a star’s brightness changes over time. Repeating dips in the curve often indicate a planet’s orbit.
 
 ## Styling Notes
 - Tailwind CSS powers the interface (`src/styles/global.css`). Use utility classes for layout tweaks, or extend theme tokens in `tailwind.config.js` for consistent colors and shadows.
