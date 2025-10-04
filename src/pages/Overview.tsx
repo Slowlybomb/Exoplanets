@@ -1,6 +1,7 @@
 import { Link } from "react-router-dom";
-import { ArrowUpRight, Compass } from "lucide-react";
+import { ArrowUpRight } from "lucide-react";
 import { Card } from "../components/ui/Card";
+import { InfoTooltip } from "../components/ui/InfoTooltip";
 import {
   dispositionSummary,
   exoplanetSummaryStats,
@@ -8,30 +9,42 @@ import {
   topConfirmedPlanets
 } from "../data/exoplanets";
 
-const statHighlights = [
+type StatHighlight = {
+  id: string;
+  title: string;
+  value: string;
+  detail: string;
+  tooltip: string;
+};
+
+const statHighlights: StatHighlight[] = [
   {
     id: "catalogued",
     title: "Catalogued Objects",
     value: exoplanetSummaryStats.totalCatalogued.toLocaleString(),
-    detail: "KOIs in the 2025-10-04 release"
+    detail: "KOIs in the 2025-10-04 release",
+    tooltip: "Total count of Kepler Objects of Interest in this CSV, including confirmed planets, candidates, and signals later marked as false positives."
   },
   {
     id: "confirmed",
     title: "Confirmed Exoplanets",
     value: exoplanetSummaryStats.confirmedCount.toLocaleString(),
-    detail: "Archive disposition CONFIRMED"
+    detail: "Archive disposition CONFIRMED",
+    tooltip: "KOIs that have enough follow-up evidence to be validated as real exoplanets by the NASA archive team."
   },
   {
     id: "candidate",
     title: "Promising Candidates",
     value: exoplanetSummaryStats.candidateCount.toLocaleString(),
-    detail: "Awaiting follow-up or validation"
+    detail: "Awaiting follow-up or validation",
+    tooltip: "Signals that look planetary but still need more observations before NASA will call them confirmed."
   },
   {
     id: "temperate",
     title: "Temperate Small Worlds",
     value: exoplanetSummaryStats.smallTemperateCount.toLocaleString(),
-    detail: "≤2 R⊕ and 180–320 K equilibrium"
+    detail: "≤2 R⊕ and 180–320 K equilibrium",
+    tooltip: "Planets that are roughly Earth-sized and fall within a temperature band where surface water could stay liquid."
   },
   {
     id: "median-radius",
@@ -40,13 +53,25 @@ const statHighlights = [
       exoplanetSummaryStats.medianRadius !== null
         ? `${exoplanetSummaryStats.medianRadius.toFixed(2)} R⊕`
         : "—",
-    detail: "Across planets with measured radius"
+    detail: "Across planets with measured radius",
+    tooltip: "Half the planets with measured radius are smaller than this value and half are larger—useful when comparing catalog updates."
+  },
+  {
+    id: "brightness-index",
+    title: "Star Brightness Index",
+    value:
+      exoplanetSummaryStats.averageStarBrightnessIndex !== null
+        ? exoplanetSummaryStats.averageStarBrightnessIndex.toFixed(2)
+        : "—",
+    detail: "Average host-star brightness vs Sun (1.0 ≈ Sun)",
+    tooltip: "Calculated from stellar effective temperature compared with the Sun (Teff ≈ 5778 K). Values above 1.0 indicate hotter, brighter stars; below 1.0 indicates cooler hosts."
   },
   {
     id: "false-positive",
     title: "Flagged False Positives",
     value: exoplanetSummaryStats.falsePositiveCount.toLocaleString(),
-    detail: "KOIs no longer considered planetary"
+    detail: "KOIs no longer considered planetary",
+    tooltip: "Signals once tagged as KOIs that later turned out to be stellar noise, instrumentation artifacts, or eclipsing binary stars."
   }
 ];
 
@@ -65,6 +90,39 @@ const quickLinks = [
     title: "Archive Analytics",
     description: "Disposition breakdowns, candidate rankings, and follow-up priorities.",
     href: "/analytics"
+  }
+];
+
+const educationalCallouts = [
+  {
+    id: "detection",
+    title: "Detection Pipeline",
+    summary: "How the mission turns tiny dips in starlight into Kepler Objects of Interest (KOIs).",
+    points: [
+      "Kepler collects light curves—brightness measurements for more than 150,000 stars.",
+      "Automated transit search algorithms flag repeating dips that match the shape of a planet eclipse.",
+      "The science team vets the signal quality and publishes promising targets as KOIs in the archive."
+    ]
+  },
+  {
+    id: "habitability",
+    title: "Habitability Criteria",
+    summary: "Rules of thumb for spotting potentially temperate, Earth-sized worlds.",
+    points: [
+      "Radius near or below two Earth radii suggests a rocky composition instead of a gas giant.",
+      "Equilibrium temperature between roughly 180–320 K keeps a planet in the not-too-hot/not-too-cold zone.",
+      "Stable orbits around quieter, Sun-like stars make follow-up climate studies more practical."
+    ]
+  },
+  {
+    id: "follow-up",
+    title: "Follow-up Workflow",
+    summary: "What happens after a KOI looks convincing enough to chase down.",
+    points: [
+      "Ground-based telescopes confirm the signal and rule out background stars or eclipsing binaries.",
+      "Spectroscopic measurements estimate the host star’s properties, refining the planet’s size and orbit.",
+      "Validated planets graduate to CONFIRMED status and become prime candidates for atmospheric study."
+    ]
   }
 ];
 
@@ -89,16 +147,19 @@ export default function Overview(): JSX.Element {
             and analyse archive dispositions to accelerate your hackathon AI experiments.
           </p>
         </div>
-        <div className="flex flex-col items-start gap-2 rounded-2xl border border-brand-accent/40 bg-brand-accent/10 px-4 py-3 text-sm text-brand-accent sm:flex-row sm:items-center">
-          <Compass className="h-4 w-4" />
-          <span>Built for rapid triage of new KOIs · Updated 4 Oct 2025</span>
-        </div>
       </header>
 
       <section className="grid gap-4 md:grid-cols-2 xl:grid-cols-3">
         {statHighlights.map((stat) => (
           <Card key={stat.id} title={stat.title} description={stat.value}>
-            <p>{stat.detail}</p>
+            <div className="flex items-start justify-between gap-3">
+              <p className="text-brand-slate/70">{stat.detail}</p>
+              {stat.tooltip ? (
+                <InfoTooltip label={`What does ${stat.title} mean?`}>
+                  {stat.tooltip}
+                </InfoTooltip>
+              ) : null}
+            </div>
           </Card>
         ))}
       </section>
@@ -161,6 +222,27 @@ export default function Overview(): JSX.Element {
           </Link>
         </Card>
       </section>
+
+      <Card title="Mission Primer" description="Key context for demos and stakeholder briefings">
+        <div className="space-y-3">
+          {educationalCallouts.map((callout) => (
+            <details
+              key={callout.id}
+              className="rounded-2xl border border-brand-slate/30 bg-brand-indigo/40 p-4"
+            >
+              <summary className="cursor-pointer text-sm font-semibold text-brand-white">
+                {callout.title}
+              </summary>
+              <p className="mt-2 text-sm text-brand-slate/70">{callout.summary}</p>
+              <ul className="mt-3 space-y-2 text-sm text-brand-slate/70">
+                {callout.points.map((point) => (
+                  <li key={point}>{point}</li>
+                ))}
+              </ul>
+            </details>
+          ))}
+        </div>
+      </Card>
 
       <section className="grid gap-4 sm:grid-cols-2 xl:grid-cols-3">
         {quickLinks.map((link) => (

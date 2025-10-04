@@ -26,6 +26,7 @@ function PlanetTable({
               <th className="py-2 px-4">Radius (R⊕)</th>
               <th className="py-2 px-4">Teq (K)</th>
               <th className="py-2 px-4">Flux (⊕)</th>
+              <th className="py-2 px-4">Star Brightness</th>
             </tr>
           </thead>
           <tbody className="divide-y divide-brand-slate/20 text-brand-white/90">
@@ -38,6 +39,9 @@ function PlanetTable({
                 <td className="py-3 px-4">{planet.planetRadiusEarth !== null ? planet.planetRadiusEarth.toFixed(2) : "—"}</td>
                 <td className="py-3 px-4">{planet.equilibriumTempK !== null ? Math.round(planet.equilibriumTempK) : "—"}</td>
                 <td className="py-3 px-4">{planet.insolationEarth !== null ? planet.insolationEarth.toFixed(1) : "—"}</td>
+                <td className="py-3 px-4">
+                  {planet.stellarBrightnessIndex !== null ? planet.stellarBrightnessIndex.toFixed(2) : "—"}
+                </td>
               </tr>
             ))}
           </tbody>

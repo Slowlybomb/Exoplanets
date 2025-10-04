@@ -1,6 +1,7 @@
 import { Link, useNavigate, useParams } from "react-router-dom";
 import { ArrowLeft } from "lucide-react";
 import { Card } from "../components/ui/Card";
+import { InfoTooltip } from "../components/ui/InfoTooltip";
 import { getPlanetDetailByName, getAllFeaturedPlanets, type FeaturedPlanet } from "../data/exoplanets";
 import { OrbitSimulation } from "../components/orbit/OrbitSimulation";
 import { PlanetGallery } from "../components/PlanetGallery";
@@ -130,6 +131,18 @@ export default function PlanetDetail(): JSX.Element {
 
       <Section title="Host Star Insights">
         <dl className="grid gap-6 sm:grid-cols-2">
+          <div>
+            <dt className="flex items-center gap-2 text-xs uppercase tracking-[0.3em] text-brand-slate/60">
+              Star Brightness Index
+              <InfoTooltip label={`What does star brightness index mean for ${planetDetail.name}?`}>
+                Ratio of the host star&rsquo;s effective temperature to the Sun (Teff ≈ 5778 K). Values above 1.0 indicate
+                hotter, brighter stars.
+              </InfoTooltip>
+            </dt>
+            <dd className="text-lg font-semibold text-brand-white">
+              {formatNumber(planetDetail.stellarBrightnessIndex, { maximumFractionDigits: 2 })}
+            </dd>
+          </div>
           <div>
             <dt className="text-xs uppercase tracking-[0.3em] text-brand-slate/60">Stellar Effective Temperature</dt>
             <dd className="text-lg font-semibold text-brand-white">{formatNumber(planetDetail.stellarEffectiveTempK, { maximumFractionDigits: 0 })} K</dd>

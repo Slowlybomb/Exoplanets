@@ -14,15 +14,59 @@ type OrbitingPlanetProps = {
   periodDays: number;
 };
 
-function HostStar(): JSX.Element {
+type HostStarProps = {
+  color: string;
+};
+
+const TEMPERATURE_COLOR_STOPS = [
+  { temp: 3000, color: "#ff4d4f" },
+  { temp: 4000, color: "#ff8f3f" },
+  { temp: 6000, color: "#ffe066" },
+  { temp: 7000, color: "#fff7a6" },
+  { temp: 10000, color: "#c6e5ff" },
+  { temp: 20000, color: "#6fb6ff" },
+  { temp: 30000, color: "#3a4bff" }
+];
+
+function sampleStarColor(temperatureK: number | null | undefined): string {
+  const defaultColor = "#ffd166";
+
+  if (temperatureK === null || temperatureK === undefined || temperatureK <= 0) {
+    return defaultColor;
+  }
+
+  if (temperatureK <= TEMPERATURE_COLOR_STOPS[0].temp) {
+    return TEMPERATURE_COLOR_STOPS[0].color;
+  }
+
+  const lastStop = TEMPERATURE_COLOR_STOPS[TEMPERATURE_COLOR_STOPS.length - 1];
+  if (temperatureK >= lastStop.temp) {
+    return lastStop.color;
+  }
+
+  for (let i = 0; i < TEMPERATURE_COLOR_STOPS.length - 1; i += 1) {
+    const current = TEMPERATURE_COLOR_STOPS[i];
+    const next = TEMPERATURE_COLOR_STOPS[i + 1];
+
+    if (temperatureK >= current.temp && temperatureK <= next.temp) {
+      const t = (temperatureK - current.temp) / (next.temp - current.temp);
+      const startColor = new THREE.Color(current.color);
+      const endColor = new THREE.Color(next.color);
+      const mixed = startColor.lerp(endColor, t);
+      return `#${mixed.getHexString()}`;
+    }
+  }
+
+  return defaultColor;
+}
+
+function HostStar({ color }: HostStarProps): JSX.Element {
+  const emissiveColor = useMemo(() => new THREE.Color(color), [color]);
+
   return (
     <mesh>
       <sphereGeometry args={[1.3, 64, 64]} />
-      <meshStandardMaterial
-        emissive={new THREE.Color("#ED8335")}
-        emissiveIntensity={1.75}
-        color={new THREE.Color("#FEFEFE")}
-      />
+      <meshStandardMaterial emissive={emissiveColor} emissiveIntensity={1.75} color={new THREE.Color("#FEFEFE")} />
     </mesh>
   );
 }
@@ -76,6 +120,8 @@ function OrbitingPlanet({ orbitalRadius, planetRadius, periodDays }: OrbitingPla
 }
 
 export function OrbitSimulation({ planet }: OrbitSimulationProps): JSX.Element {
+  const starColor = useMemo(() => sampleStarColor(planet.stellarEffectiveTempK), [planet.stellarEffectiveTempK]);
+
   const orbitalRadius = useMemo(() => {
     const axis = planet.semiMajorAxisAu;
 
@@ -109,12 +155,12 @@ export function OrbitSimulation({ planet }: OrbitSimulationProps): JSX.Element {
         <Canvas camera={{ position: [5, 3.5, 5], fov: 45 }}>
           <color attach="background" args={["#070612"]} />
           <ambientLight intensity={0.3} />
-          <pointLight position={[0, 0, 0]} intensity={1.2} color={new THREE.Color("#ED8335")} />
+          <pointLight position={[0, 0, 0]} intensity={1.2} color={new THREE.Color(starColor)} />
           <Suspense fallback={null}>
             <Stars radius={80} depth={40} count={5000} factor={2.5} saturation={0} fade />
             <group rotation={[-Math.PI / 2.8, 0, 0]}>
               <OrbitPath radius={orbitalRadius} />
-              <HostStar />
+              <HostStar color={starColor} />
               <OrbitingPlanet
                 orbitalRadius={orbitalRadius}
                 planetRadius={planetRadius}

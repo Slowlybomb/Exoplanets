@@ -1,6 +1,7 @@
 import { useMemo } from "react";
 import { Link } from "react-router-dom";
 import type { FeaturedPlanet } from "../data/exoplanets";
+import { InfoTooltip } from "./ui/InfoTooltip";
 
 type PlanetGalleryProps = {
   planets: FeaturedPlanet[];
@@ -44,7 +45,9 @@ export function PlanetGallery({ planets, selectedPlanetName, onSelectOrbit }: Pl
           distanceLabel:
             distanceAu !== null && lightMinutes !== null
               ? `${distanceAu.toFixed(2)} AU · ${lightMinutes.toFixed(1)} light-min`
-              : "Distance unavailable"
+              : "Distance unavailable",
+          brightnessLabel:
+            planet.stellarBrightnessIndex !== null ? planet.stellarBrightnessIndex.toFixed(2) : "Unknown"
         };
       }),
     [planets]
@@ -52,7 +55,7 @@ export function PlanetGallery({ planets, selectedPlanetName, onSelectOrbit }: Pl
 
   return (
     <div className="grid gap-6 md:grid-cols-2 xl:grid-cols-3">
-      {posters.map(({ planet, texture, periodLabel, radiusLabel, distanceLabel }) => {
+      {posters.map(({ planet, texture, periodLabel, radiusLabel, distanceLabel, brightnessLabel }) => {
         const isSelected = planet.name === selectedPlanetName;
 
         return (
@@ -87,6 +90,16 @@ export function PlanetGallery({ planets, selectedPlanetName, onSelectOrbit }: Pl
                 <div className="col-span-2">
                   <dt className="text-xs uppercase tracking-[0.3em] text-brand-slate/60">Estimated Distance</dt>
                   <dd className="font-semibold">{distanceLabel}</dd>
+                </div>
+                <div className="col-span-2">
+                  <dt className="flex items-center gap-2 text-xs uppercase tracking-[0.3em] text-brand-slate/60">
+                    Star Brightness Index
+                    <InfoTooltip label={`What does Star Brightness Index mean for ${planet.name}?`}>
+                      Ratio of the host star's effective temperature to the Sun (Teff ≈ 5778 K). Hotter stars land above 1.0,
+                      cooler stars fall below.
+                    </InfoTooltip>
+                  </dt>
+                  <dd className="font-semibold">{brightnessLabel}</dd>
                 </div>
               </dl>
 
