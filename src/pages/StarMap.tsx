@@ -2,19 +2,12 @@ import { useRef, RefObject, useState, useEffect } from "react";
 import {loadStarsFromCsv} from "../utils/KeplerCSVParser";
 import React from "react";
 
-<<<<<<< HEAD
 const spatialScale = 15;
 const sizeScale = 100;
 const maxZoom= 10;
 const minZoom = 0.05;
 
 let bounds: { minRA: number; maxRA: number; minDec: number; maxDec: number; };
-=======
-const spatialScale = 6;
-const sizeScale = 2;
-const maxZoom = 0.8;
-const minZoom = 2;
->>>>>>> d35f4e4 (merge?)
 
 enum KeplerObjectType {
     CONFIRMED = "CONFIRMED",
