@@ -1,4 +1,4 @@
-import { useMemo, useState, type ChangeEvent } from "react";
+import { useMemo, useState } from "react";
 import { Link } from "react-router-dom";
 import { ArrowUpRight } from "lucide-react";
 import { Card } from "../components/ui/Card";
@@ -308,41 +308,6 @@ function Sparkline({ values, color }: SparklineProps): JSX.Element {
   );
 }
 
-type CandidateScoreBarsProps = {
-  count: number;
-};
-
-function CandidateScoreBars({ count }: CandidateScoreBarsProps): JSX.Element {
-  const scores = leadingCandidates.slice(0, count).map((candidate) => ({
-    name: candidate.name,
-    score: candidate.koiScore ?? 0
-  }));
-  const maxScore = scores.reduce((acc, item) => Math.max(acc, item.score), 0) || 1;
-
-  return (
-    <div className="flex items-end justify-between gap-3">
-      {scores.map((item) => {
-        const heightPercent = (item.score / maxScore) * 100;
-        return (
-          <div key={item.name} className="flex w-full flex-col items-center gap-2">
-            <div className="flex h-24 w-full items-end">
-              <div
-                className="w-full rounded-t-md bg-gradient-to-t from-brand-accent/40 via-brand-accent/70 to-brand-accent"
-                style={{ height: `${Math.max(heightPercent, 6)}%` }}
-                title={`${item.name}: ${item.score.toFixed(2)}`}
-              />
-            </div>
-            <p className="text-center text-[11px] font-medium text-brand-slate/60">
-              {item.name.replace(/^KOI-/, "")}
-            </p>
-            <p className="text-xs font-semibold text-brand-white">{item.score.toFixed(2)}</p>
-          </div>
-        );
-      })}
-    </div>
-  );
-}
-
 type MetricPreset = {
   key: string;
   label: string;
@@ -416,40 +381,6 @@ function MetricPlayground({ presets }: MetricPlaygroundProps): JSX.Element {
           </dl>
         </>
       ) : null}
-    </div>
-  );
-}
-
-function CandidateLeaderboard(): JSX.Element {
-  const maxCount = Math.max(1, Math.min(leadingCandidates.length, 10));
-  const minCount = Math.min(3, maxCount);
-  const [count, setCount] = useState<number>(Math.max(minCount, 1));
-
-  const handleChange = (event: ChangeEvent<HTMLInputElement>) => {
-    const next = Number(event.target.value);
-    setCount(Number.isFinite(next) ? next : Math.max(minCount, 1));
-  };
-
-  return (
-    <div className="space-y-4">
-      <div className="flex items-center justify-between gap-3">
-        <label htmlFor="candidate-slider" className="text-xs font-semibold uppercase tracking-[0.3em] text-brand-slate/60">
-          Top {count} KOIs
-        </label>
-        <input
-          id="candidate-slider"
-          type="range"
-          min={Math.max(minCount, 1)}
-          max={maxCount}
-          value={count}
-          onChange={handleChange}
-          className="h-1 w-40 cursor-pointer appearance-none rounded bg-brand-slate/30 accent-brand-accent"
-        />
-      </div>
-      <CandidateScoreBars count={count} />
-      <p className="text-sm text-brand-slate/70">
-        Drag the slider to compare how many strong candidates you want to showcase. Scores close to 1.0 are most planet-like.
-      </p>
     </div>
   );
 }
@@ -779,12 +710,9 @@ export default function Analytics(): JSX.Element {
         </Card>
       </section>
 
-      <section className="grid gap-6 lg:grid-cols-3">
+      <section className="grid gap-6 lg:grid-cols-2">
         <Card title="Metric Playground" description="Toggle between mission metrics to explore sample distributions">
           <MetricPlayground presets={metricPresets} />
-        </Card>
-        <Card title="Candidate Signal Lab" description="Adjust how many KOIs to compare">
-          <CandidateLeaderboard />
         </Card>
         <Card title="Thermal Profile" description="Switch between confirmed planets and KOI candidates">
           <ThermalProfileCard />

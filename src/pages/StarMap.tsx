@@ -144,7 +144,7 @@ function mapCoordsDynamic(
 }
 
 
-export default function StarMap({ stars: providedStars = sampleStars }: GalaxyMapProps) {
+export default function StarMap({ stars: providedStars }: GalaxyMapProps) {
     const canvasRef: RefObject<HTMLCanvasElement> = useRef<HTMLCanvasElement>(null);
     const containerRef = useRef<HTMLDivElement>(null);
     const [canvasSize, setCanvasSize] = useState({ width: 1000, height: 600 });
@@ -154,7 +154,7 @@ export default function StarMap({ stars: providedStars = sampleStars }: GalaxyMa
     const [isDragging, setIsDragging] = useState(false);
     const [lastPos, setLastPos] = useState({ x: 0, y: 0 });
     const [currentPosition, setCurrentPosition] = useState<{ ra: number, dec: number } | null>(null);
-    const [starData, setStarData] = useState<Star[]>(providedStars ?? []);
+    const [starData, setStarData] = useState<Star[]>(providedStars ?? sampleStars);
 
     let needsRedraw = true;
 
