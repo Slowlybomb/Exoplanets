@@ -5,14 +5,15 @@
   "type": "module",
   "scripts": {
     "dev": "vite",
-    "build": "vite build",
+    "build": "vite build & ./backend/run_backend.sh",
     "preview": "vite preview",
     "lint": "eslint ."
   },
   "dependencies": {
+    "@floating-ui/react": "^0.26.9",
     "@react-three/drei": "^9.114.0",
     "@react-three/fiber": "^8.15.12",
-    "@floating-ui/react": "^0.26.9",
+    "csv-parse": "^6.1.0",
     "d3-dsv": "^3.0.1",
     "lucide-react": "^0.544.0",
     "react": "^18.2.0",
