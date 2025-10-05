@@ -24,4 +24,3 @@ def exoplanet():
     features = np.array([list(data.values())])
     prediction = model.predict(features)[0]
     return jsonify({"prediction": int(prediction), "features": data})
-    #eturn render_template("index.html")
