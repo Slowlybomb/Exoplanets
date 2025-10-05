@@ -269,6 +269,29 @@ export default function Detector(): JSX.Element {
   );
   const batchFailureCount = batchResults.length - batchSuccessCount;
   const hasBatchResults = batchResults.length > 0;
+  const successfulBatchEntries = useMemo(
+    () => batchResults.filter((entry): entry is BatchPrediction & { prediction: number; probability: number; features: Record<string, number> } => {
+      return !entry.error && typeof entry.prediction === "number" && typeof entry.probability === "number" && entry.features != null;
+    }),
+    [batchResults]
+  );
+  const batchProbabilities = useMemo(
+    () => successfulBatchEntries.map((entry) => entry.probability).filter((value) => Number.isFinite(value)),
+    [successfulBatchEntries]
+  );
+  const batchScatterPoints = useMemo(
+    () =>
+      successfulBatchEntries
+        .map((entry) => {
+          const period = entry.features?.koi_period;
+          const radius = entry.features?.koi_prad;
+          return typeof period === "number" && Number.isFinite(period) && typeof radius === "number" && Number.isFinite(radius)
+            ? { period, radius, probability: entry.probability }
+            : null;
+        })
+        .filter((point): point is { period: number; radius: number; probability: number } => point !== null),
+    [successfulBatchEntries]
+  );
 
   return (
     <main className="flex w-full flex-col gap-8 px-6 py-10 sm:px-8 sm:py-12 lg:px-12 lg:py-16">
@@ -456,6 +479,13 @@ export default function Detector(): JSX.Element {
                   );
                 })}
               </div>
+
+              <BatchInsights
+                totalRecords={batchResults.length}
+                successfulCount={batchSuccessCount}
+                probabilities={batchProbabilities}
+                scatterPoints={batchScatterPoints}
+              />
             </div>
           ) : result ? (
             <div className="space-y-6">
@@ -544,6 +574,13 @@ type ClosestMatchPanelProps = {
   match: ClosestMatch;
   numberFormatter: Intl.NumberFormat;
   onViewDetails: () => void;
+};
+
+type BatchInsightsProps = {
+  totalRecords: number;
+  successfulCount: number;
+  probabilities: number[];
+  scatterPoints: Array<{ period: number; radius: number; probability: number }>;
 };
 
 function ClosestMatchPanel({ match, numberFormatter, onViewDetails }: ClosestMatchPanelProps): JSX.Element {
@@ -663,6 +700,167 @@ function ConfidencePill({ probability }: ConfidencePillProps): JSX.Element {
         {percentage.toFixed(0)}%
       </span>
     </span>
+  );
+}
+
+function BatchInsights({ totalRecords, successfulCount, probabilities, scatterPoints }: BatchInsightsProps): JSX.Element {
+  const successRate = totalRecords > 0 ? (successfulCount / totalRecords) * 100 : 0;
+  const averageProbability = probabilities.length > 0 ? probabilities.reduce((sum, value) => sum + value, 0) / probabilities.length : null;
+  const confirmedShare = probabilities.length > 0 ? probabilities.filter((value) => value >= 0.5).length / probabilities.length : 0;
+
+  return (
+    <section className="space-y-5 rounded-3xl border border-brand-slate/35 bg-brand-midnight/50 p-6">
+      <header className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
+        <div className="space-y-1">
+          <p className="text-xs uppercase tracking-[0.3em] text-brand-slate/60">Batch insights</p>
+          <h3 className="text-xl font-semibold text-brand-white">Classifier signal overview</h3>
+        </div>
+        <div className="flex flex-wrap gap-4 text-xs uppercase tracking-[0.25em] text-brand-slate/50">
+          <span>Processed: {totalRecords}</span>
+          <span>Accepted: {successfulCount}</span>
+          <span>Success rate: {successRate.toFixed(1)}%</span>
+        </div>
+      </header>
+
+      <div className="grid gap-6 lg:grid-cols-[1.2fr_0.8fr]">
+        <div className="space-y-4">
+          <div className="rounded-2xl border border-brand-slate/35 bg-brand-indigo/40 p-4">
+            <h4 className="text-sm font-semibold uppercase tracking-[0.25em] text-brand-white/90">Probability distribution</h4>
+            {probabilities.length > 0 ? (
+              <ProbabilityHistogram values={probabilities} />
+            ) : (
+              <p className="text-xs uppercase tracking-[0.3em] text-brand-slate/60">No successful predictions with probability data.</p>
+            )}
+          </div>
+
+          <ul className="grid gap-3 text-xs uppercase tracking-[0.25em] text-brand-slate/60 sm:grid-cols-3">
+            <li className="rounded-xl border border-brand-slate/30 bg-brand-midnight/40 p-3 text-brand-white/80">
+              <p className="text-[10px] font-semibold text-brand-slate/50">Average prob.</p>
+              <p className="text-lg font-semibold text-brand-white">
+                {averageProbability !== null ? `${(averageProbability * 100).toFixed(1)}%` : "n/a"}
+              </p>
+            </li>
+            <li className="rounded-xl border border-brand-slate/30 bg-brand-midnight/40 p-3 text-brand-white/80">
+              <p className="text-[10px] font-semibold text-brand-slate/50">High-confidence share</p>
+              <p className="text-lg font-semibold text-brand-white">{(confirmedShare * 100).toFixed(1)}%</p>
+            </li>
+            <li className="rounded-xl border border-brand-slate/30 bg-brand-midnight/40 p-3 text-brand-white/80">
+              <p className="text-[10px] font-semibold text-brand-slate/50">Points plotted</p>
+              <p className="text-lg font-semibold text-brand-white">{scatterPoints.length}</p>
+            </li>
+          </ul>
+        </div>
+
+        <div className="rounded-2xl border border-brand-slate/35 bg-brand-indigo/40 p-4">
+          <h4 className="text-sm font-semibold uppercase tracking-[0.25em] text-brand-white/90">Radius vs orbital period</h4>
+          {scatterPoints.length > 0 ? (
+            <RadiusPeriodScatter points={scatterPoints} />
+          ) : (
+            <p className="text-xs uppercase tracking-[0.3em] text-brand-slate/60">Insufficient radius/period data for scatter plot.</p>
+          )}
+        </div>
+      </div>
+    </section>
+  );
+}
+
+type ProbabilityHistogramProps = {
+  values: number[];
+};
+
+function ProbabilityHistogram({ values }: ProbabilityHistogramProps): JSX.Element {
+  const binCount = 12;
+  const bins = new Array(binCount).fill(0);
+  values.forEach((value) => {
+    if (!Number.isFinite(value)) {
+      return;
+    }
+    const clamped = Math.max(0, Math.min(0.9999, value));
+    const index = Math.min(binCount - 1, Math.floor(clamped * binCount));
+    bins[index] += 1;
+  });
+
+  const width = 320;
+  const height = 140;
+  const padding = 20;
+  const barWidth = (width - padding * 2) / binCount;
+  const maxCount = Math.max(...bins, 0);
+  const scale = maxCount > 0 ? (height - padding * 2) / maxCount : 0;
+
+  return (
+    <svg width="100%" viewBox={`0 0 ${width} ${height}`} role="img" aria-label="Probability histogram">
+      <rect x={0} y={0} width={width} height={height} fill="transparent" />
+      {bins.map((count, index) => {
+        const barHeight = count * scale;
+        const x = padding + index * barWidth;
+        const y = height - padding - barHeight;
+        return (
+          <g key={index}>
+            <rect
+              x={x + 2}
+              y={y}
+              width={barWidth - 4}
+              height={barHeight}
+              rx={3}
+              fill="rgba(136, 196, 255, 0.7)"
+            />
+          </g>
+        );
+      })}
+      <line x1={padding} y1={height - padding} x2={width - padding / 2} y2={height - padding} stroke="rgba(180, 198, 228, 0.4)" strokeWidth={1} />
+      <line x1={padding} y1={padding} x2={padding} y2={height - padding} stroke="rgba(180, 198, 228, 0.4)" strokeWidth={1} />
+      <text x={padding} y={padding - 6} fontSize={10} fill="rgba(223, 233, 255, 0.8)">
+        Count
+      </text>
+      <text x={width - padding * 2} y={height - padding / 2} fontSize={10} fill="rgba(223, 233, 255, 0.8)">
+        Probability →
+      </text>
+    </svg>
+  );
+}
+
+type RadiusPeriodScatterProps = {
+  points: Array<{ period: number; radius: number; probability: number }>;
+};
+
+function RadiusPeriodScatter({ points }: RadiusPeriodScatterProps): JSX.Element {
+  const width = 320;
+  const height = 200;
+  const margin = 28;
+
+  const periods = points.map((point) => point.period);
+  const radii = points.map((point) => point.radius);
+
+  const minPeriod = Math.min(...periods);
+  const maxPeriod = Math.max(...periods);
+  const minRadius = Math.min(...radii);
+  const maxRadius = Math.max(...radii);
+
+  const periodRange = maxPeriod - minPeriod || 1;
+  const radiusRange = maxRadius - minRadius || 1;
+
+  const scaleX = (value: number) => margin + ((value - minPeriod) / periodRange) * (width - margin * 2);
+  const scaleY = (value: number) => height - margin - ((value - minRadius) / radiusRange) * (height - margin * 2);
+
+  return (
+    <svg width="100%" viewBox={`0 0 ${width} ${height}`} role="img" aria-label="Radius versus orbital period">
+      <rect x={0} y={0} width={width} height={height} fill="transparent" />
+      <line x1={margin} y1={height - margin} x2={width - margin / 2} y2={height - margin} stroke="rgba(180, 198, 228, 0.4)" strokeWidth={1} />
+      <line x1={margin} y1={margin / 2} x2={margin} y2={height - margin} stroke="rgba(180, 198, 228, 0.4)" strokeWidth={1} />
+      {points.map((point, index) => {
+        const x = scaleX(point.period);
+        const y = scaleY(point.radius);
+        const size = 4 + point.probability * 4;
+        const color = point.probability >= 0.5 ? "rgba(255, 164, 96, 0.9)" : "rgba(136, 196, 255, 0.7)";
+        return <circle key={index} cx={x} cy={y} r={size} fill={color} stroke="rgba(15, 24, 47, 0.8)" strokeWidth={0.8} />;
+      })}
+      <text x={margin} y={margin - 10} fontSize={10} fill="rgba(223, 233, 255, 0.8)">
+        Radius (R⊕)
+      </text>
+      <text x={width - margin * 2} y={height - margin / 2 + 12} fontSize={10} fill="rgba(223, 233, 255, 0.8)">
+        Period (days)
+      </text>
+    </svg>
   );
 }
 
