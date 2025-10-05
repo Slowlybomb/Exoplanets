@@ -5,7 +5,8 @@ import { InfoTooltip } from "./ui/InfoTooltip";
 
 type PlanetGalleryProps = {
   planets: FeaturedPlanet[];
-  selectedPlanetName?: string;
+  favoriteIds?: string[];
+  onToggleFavorite?: (planet: FeaturedPlanet) => void;
   onSelectOrbit?: (planet: FeaturedPlanet) => void;
 };
 
@@ -29,7 +30,7 @@ function formatValue(value: number | null | undefined, unit: string, digits = 2)
   return unit ? `${formatted} ${unit}` : formatted;
 }
 
-export function PlanetGallery({ planets, selectedPlanetName, onSelectOrbit }: PlanetGalleryProps): JSX.Element {
+export function PlanetGallery({ planets, favoriteIds, onToggleFavorite, onSelectOrbit }: PlanetGalleryProps): JSX.Element {
   const posters = useMemo(
     () =>
       planets.map((planet) => {
@@ -56,7 +57,7 @@ export function PlanetGallery({ planets, selectedPlanetName, onSelectOrbit }: Pl
   return (
     <div className="grid gap-6 md:grid-cols-2 xl:grid-cols-3">
       {posters.map(({ planet, texture, periodLabel, radiusLabel, distanceLabel, brightnessLabel }) => {
-        const isSelected = planet.name === selectedPlanetName;
+        const isFavorited = favoriteIds?.includes(planet.catalogId) ?? false;
 
         return (
           <article
@@ -73,6 +74,9 @@ export function PlanetGallery({ planets, selectedPlanetName, onSelectOrbit }: Pl
                   {planet.disposition}
                 </p>
                 <h3 className="text-2xl font-semibold text-brand-white">{planet.name}</h3>
+                <p className="font-mono text-xs uppercase tracking-[0.2em] text-brand-slate/50">
+                  {planet.catalogId}
+                </p>
                 <p className="text-sm text-brand-slate/70">
                   Procedurally generated texture inspired by KOI parameters.
                 </p>
@@ -103,11 +107,24 @@ export function PlanetGallery({ planets, selectedPlanetName, onSelectOrbit }: Pl
                 </div>
               </dl>
 
-              <div className="flex items-center justify-between">
+              <div className="flex flex-col gap-3">
                 <span className="text-xs uppercase tracking-[0.3em] text-brand-slate/60">
                   Transit depth proxy · KOI score {formatValue(planet.koiScore, "", 2)}
                 </span>
-                <div className="flex items-center gap-2">
+                <div className="flex flex-wrap items-center gap-2">
+                  {onToggleFavorite ? (
+                    <button
+                      type="button"
+                      onClick={() => onToggleFavorite(planet)}
+                      className={`rounded-full px-4 py-2 text-xs font-semibold uppercase tracking-[0.2em] transition ${
+                        isFavorited
+                          ? "border border-brand-accent bg-brand-accent/20 text-brand-accent"
+                          : "border border-brand-slate/50 bg-transparent text-brand-white hover:border-brand-accent hover:text-brand-accent"
+                      }`}
+                    >
+                      {isFavorited ? "Favorited" : "Favorite"}
+                    </button>
+                  ) : null}
                   <Link
                     to={`/planet/${encodeURIComponent(planet.name)}`}
                     className="inline-flex items-center gap-2 rounded-full border border-brand-slate/50 bg-transparent px-4 py-2 text-xs font-semibold uppercase tracking-[0.2em] text-brand-white transition hover:border-brand-accent hover:text-brand-accent"
@@ -117,29 +134,12 @@ export function PlanetGallery({ planets, selectedPlanetName, onSelectOrbit }: Pl
                   {onSelectOrbit ? (
                     <button
                       type="button"
-                      className={`inline-flex items-center gap-2 rounded-full border px-4 py-2 text-xs font-semibold uppercase tracking-[0.2em] transition ${
-                        isSelected
-                          ? "border-brand-accent bg-brand-accent/20 text-brand-accent"
-                          : "border-brand-slate/50 bg-transparent text-brand-white hover:border-brand-accent hover:text-brand-accent"
-                      }`}
-                      onClick={() => {
-                        onSelectOrbit(planet);
-                        const target = document.querySelector<HTMLElement>("#orbit");
-                        if (target) {
-                          target.scrollIntoView({ behavior: "smooth", block: "start" });
-                        }
-                      }}
-                    >
-                      View orbit
-                    </button>
-                  ) : (
-                    <Link
-                      to={`/orbit?planet=${encodeURIComponent(planet.name)}`}
+                      onClick={() => onSelectOrbit(planet)}
                       className="inline-flex items-center gap-2 rounded-full border border-brand-slate/50 bg-transparent px-4 py-2 text-xs font-semibold uppercase tracking-[0.2em] text-brand-white transition hover:border-brand-accent hover:text-brand-accent"
                     >
                       View orbit
-                    </Link>
-                  )}
+                    </button>
+                  ) : null}
                 </div>
               </div>
             </div>

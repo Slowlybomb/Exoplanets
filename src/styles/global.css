@@ -30,4 +30,28 @@
   .grid-section {
     @apply grid gap-5 sm:gap-6 md:grid-cols-2 xl:grid-cols-3;
   }
+
+  .range-slider .slider-thumb {
+    @apply absolute inset-0 h-full w-full appearance-none bg-transparent;
+    pointer-events: none;
+  }
+
+  .range-slider .slider-thumb::-webkit-slider-thumb {
+    @apply h-4 w-4 appearance-none rounded-full border-2 border-brand-midnight bg-brand-accent shadow-lg transition;
+    pointer-events: auto;
+  }
+
+  .range-slider .slider-thumb::-moz-range-thumb {
+    @apply h-4 w-4 appearance-none rounded-full border-2 border-brand-midnight bg-brand-accent shadow-lg transition;
+    pointer-events: auto;
+  }
+
+  .range-slider .slider-thumb::-webkit-slider-runnable-track {
+    @apply h-full bg-transparent;
+  }
+
+  .range-slider .slider-thumb::-moz-range-track {
+    @apply h-full bg-transparent;
+  }
+
 }

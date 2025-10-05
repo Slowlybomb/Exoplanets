@@ -10,7 +10,7 @@ export function InfoTooltip({ label, children }: InfoTooltipProps): JSX.Element 
   const tooltipId = useId();
 
   return (
-    <div className="group relative inline-flex">
+    <div className="group/tooltip relative inline-flex">
       <button
         type="button"
         aria-describedby={tooltipId}
@@ -22,7 +22,7 @@ export function InfoTooltip({ label, children }: InfoTooltipProps): JSX.Element 
       <div
         role="tooltip"
         id={tooltipId}
-        className="invisible absolute left-1/2 top-full z-20 w-64 -translate-x-1/2 translate-y-2 rounded-2xl border border-brand-slate/40 bg-brand-midnight/95 p-3 text-xs text-brand-slate/80 opacity-0 shadow-lg transition group-hover:visible group-hover:opacity-100 group-focus-within:visible group-focus-within:opacity-100"
+        className="invisible absolute left-1/2 top-full z-20 w-64 -translate-x-1/2 translate-y-2 rounded-2xl border border-brand-slate/40 bg-brand-midnight/95 p-3 text-xs text-brand-slate/80 opacity-0 shadow-lg transition group-hover/tooltip:visible group-hover/tooltip:opacity-100 group-focus-within/tooltip:visible group-focus-within/tooltip:opacity-100"
       >
         {children}
       </div>

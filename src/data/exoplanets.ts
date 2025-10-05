@@ -97,6 +97,17 @@ const stellarTempValues = exoplanetRecords
   .map((record) => record.stellarEffectiveTempK)
   .filter((value): value is number => value !== null);
 
+const SOLAR_EFFECTIVE_TEMP_K = 5778;
+
+function computeBrightnessIndex(temperatureK: number | null): number | null {
+  if (temperatureK === null || temperatureK <= 0) {
+    return null;
+  }
+
+  const ratio = temperatureK / SOLAR_EFFECTIVE_TEMP_K;
+  return Number.isFinite(ratio) ? ratio : null;
+}
+
 const brightnessIndexValues = stellarTempValues
   .map((value) => computeBrightnessIndex(value))
   .filter((value): value is number => value !== null && Number.isFinite(value));
@@ -120,8 +131,11 @@ export const exoplanetSummaryStats = {
       : null
 };
 
+
+
 export type FeaturedPlanet = {
   name: string;
+  catalogId: string;
   disposition: string;
   koiScore: number | null;
   periodDays: number | null;
@@ -132,17 +146,6 @@ export type FeaturedPlanet = {
   stellarEffectiveTempK: number | null;
   stellarBrightnessIndex: number | null;
 };
-
-const SOLAR_EFFECTIVE_TEMP_K = 5778;
-
-function computeBrightnessIndex(temperatureK: number | null): number | null {
-  if (temperatureK === null || temperatureK <= 0) {
-    return null;
-  }
-
-  const ratio = temperatureK / SOLAR_EFFECTIVE_TEMP_K;
-  return Number.isFinite(ratio) ? ratio : null;
-}
 
 function estimateSemiMajorAxisAu(periodDays: number | null): number | null {
   if (!periodDays || periodDays <= 0) {
@@ -158,6 +161,7 @@ function estimateSemiMajorAxisAu(periodDays: number | null): number | null {
 export function toFeaturedPlanet(record: ExoplanetRecord): FeaturedPlanet {
   return {
     name: record.keplerName ?? record.kepoiName,
+    catalogId: record.kepoiName,
     disposition: record.disposition,
     koiScore: record.koiScore,
     periodDays: record.periodDays,
