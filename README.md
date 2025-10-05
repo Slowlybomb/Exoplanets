@@ -1,3 +1,25 @@
+# To Run the webapp
+# prerequisites: npm and python 3.12+
+
+## getting the repo
+$ git clone https://github.com/Slowlybomb/Exoplanets
+
+## getting npm working (inside project root directory)
+$ npm install
+
+## if npm install doesn't work:
+$ npm ci
+
+## getting flask running with a python virtual environment (inside backend directory)
+$ python -m venv venv
+$ source venv/bin/activate
+(venv) $ pip install scikit-learn flask flask_cors pandas joblib
+(venv) deactivate
+
+## alternatively: skip the virtual environment
+pip install scikit-learn flask flask_cors pandas joblib
+
+
 # Exoplanets Finder AI
 
 Interactive dashboard for exploring NASA Exoplanet Archive KOI statistics—"KOI" stands for *Kepler Object of Interest*, a star system where NASA's Kepler telescope spotted something that might be a planet. The front-end is built with Vite, React, and TypeScript; CSV data is parsed with `d3-dsv`, rendered as insight cards, ranked tables, and a 3D orbit preview powered by react-three-fiber.
