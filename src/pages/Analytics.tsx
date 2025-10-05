@@ -72,14 +72,6 @@ const statHighlights: StatHighlight[] = [
     detail: "Average host-star brightness vs Sun (1.0 ≈ Sun)",
     tooltip:
       "Calculated from stellar effective temperature compared with the Sun (Teff ≈ 5778 K). Values above 1.0 indicate hotter, brighter stars; below 1.0 indicates cooler hosts."
-  },
-  {
-    id: "false-positive",
-    title: "Flagged False Positives",
-    value: exoplanetSummaryStats.falsePositiveCount.toLocaleString(),
-    detail: "KOIs no longer considered planetary",
-    tooltip:
-      "Signals once tagged as KOIs that later turned out to be stellar noise, instrumentation artifacts, or eclipsing binary stars."
   }
 ];
 
