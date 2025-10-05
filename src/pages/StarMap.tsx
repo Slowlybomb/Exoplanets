@@ -4,11 +4,10 @@ import React from "react";
 
 const spatialScale = 15;
 const sizeScale = 100;
-const maxZoom= 0.05;
-const minZoom = 2;
+const maxZoom= 10;
+const minZoom = 0.05;
 
 let bounds: { minRA: number; maxRA: number; minDec: number; maxDec: number; };
-
 
 enum KeplerObjectType {
     CONFIRMED = "CONFIRMED",
@@ -175,16 +174,11 @@ export default function StarMap({}: GalaxyMapProps) {
         }
     }, []);
 
-
-
     useEffect(() => {
         const canvas = canvasRef.current;
         if (!canvas) return;
         const ctx = canvas.getContext("2d");
         if (!ctx) return;
-
-
-
 
         let animationFrameId: number;
 
@@ -194,7 +188,6 @@ export default function StarMap({}: GalaxyMapProps) {
             ctx.translate(pan.x, pan.y);
             ctx.scale(zoom, zoom);
 
-            // Grid
             ctx.strokeStyle = 'rgba(255,255,255,0.3)';
             ctx.lineWidth = 1 / zoom;
 
@@ -263,10 +256,9 @@ export default function StarMap({}: GalaxyMapProps) {
             const mouseX = e.clientX - rect.left;
             const mouseY = e.clientY - rect.top;
 
-            const scaleFactor = e.deltaY > 0 ? 0.98 : 10.2;
-
+            const scaleFactor = e.deltaY > 0 ? 0.98 : 1.02;
             setZoom(prevZoom => {
-                const newZoom = Math.max(maxZoom, Math.min(minZoom, prevZoom * scaleFactor));
+                const newZoom = Math.min(maxZoom, Math.max(minZoom, prevZoom * scaleFactor));
                 const actualScale = newZoom / prevZoom;
 
                 setPan(prevPan => ({
@@ -279,8 +271,6 @@ export default function StarMap({}: GalaxyMapProps) {
         };
 
 
-
-
         render();
 
 
@@ -291,7 +281,6 @@ export default function StarMap({}: GalaxyMapProps) {
             canvas.removeEventListener('wheel', wheelHandler);
         }
     }, [stars, canvasSize.width, canvasSize.height, pan, zoom]);
-
 
     const handleMouseDown = (e: React.MouseEvent<HTMLCanvasElement>) => {
         setIsDragging(true);
@@ -324,33 +313,10 @@ export default function StarMap({}: GalaxyMapProps) {
             const { x, y } = mapCoordsDynamic(star, bounds, canvasSize.width, canvasSize.height, spatialScale);
             const radius = normaliseRadius(star.srad, sizeScale);
             return Math.hypot(mouseX - x, mouseY - y) <= radius;
-            return Math.hypot(mouseX - x, mouseY - y) <= radius;
         });
 
         setHoveredStar(hoverStar || null);
     };
-
-    const handleWheel = (e: React.WheelEvent<HTMLCanvasElement>) => {
-        e.preventDefault();
-        needsRedraw = true;
-        const rect = canvasRef.current?.getBoundingClientRect();
-        if (!rect) return;
-
-        const mouseX = e.clientX - rect.left;
-        const mouseY = e.clientY - rect.top;
-
-        const scaleFactor = e.deltaY > 0 ? 0.98 : 1.02;
-
-        setPan(prev => ({
-            x: mouseX - (mouseX - prev.x) * scaleFactor,
-            y: mouseY - (mouseY - prev.y) * scaleFactor
-        }));
-
-        setZoom(prev => (
-
-            Math.max(maxZoom, Math.min(minZoom, prev * scaleFactor))));
-    };
-
 
     return (
         <main className="mx-auto flex w-full max-w-6xl flex-col gap-8 px-4 py-10 sm:px-6 sm:py-12 lg:px-10 lg:py-16">
@@ -369,7 +335,7 @@ export default function StarMap({}: GalaxyMapProps) {
                 style={{
                 position: "relative",
                 width: "100%",
-                height: "75vh",
+                height: "72vh",
                 overflow: "hidden",
                 display: "flex",
                 justifyContent: "center",
@@ -395,7 +361,6 @@ export default function StarMap({}: GalaxyMapProps) {
                         setIsDragging(false);
                         setCurrentPosition(null);
                     }}
-                    onWheel={handleWheel}
                 />
 
                 {hoveredStar && (
