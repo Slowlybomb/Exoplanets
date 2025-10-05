@@ -22,7 +22,7 @@ CORS(app)
 
 SAMPLE_PATH = Path(__file__).with_name("test_data.json")
 MODEL_PARAMS_PATH = Path(__file__).with_name("lightweight_model.json")
-JOBLIB_MODEL_PATH = Path(__file__).with_name("model_test_1.joblib")
+JOBLIB_MODEL_PATH = Path(__file__).with_name("model.joblib")
 
 _JOBLIB_MODEL = None
 
