@@ -13,9 +13,7 @@ type PredictionResponse = {
 type FormState = Record<string, string>;
 
 const API_URL = "http://localhost:5000/exoplanet";
-
 const FEATURE_FIELDS: Array<{ key: string; label: string; help?: string }> = [
-  { key: "koi_score", label: "KOI Score" },
   { key: "koi_period", label: "Orbital Period (days)" },
   { key: "koi_period_err1", label: "Period +σ" },
   { key: "koi_period_err2", label: "Period −σ" },
@@ -34,7 +32,7 @@ const FEATURE_FIELDS: Array<{ key: string; label: string; help?: string }> = [
   { key: "koi_prad", label: "Planet Radius (R⊕)" },
   { key: "koi_prad_err1", label: "Radius +σ" },
   { key: "koi_prad_err2", label: "Radius −σ" },
-  { key: "koi_teq", label: "Equilibrium Temp (K)" },
+  { key: "koi_teq", label: "Equilibrium Temperature (K)" },
   { key: "koi_insol", label: "Insolation (S⊕)" },
   { key: "koi_insol_err1", label: "Insolation +σ" },
   { key: "koi_insol_err2", label: "Insolation −σ" },
@@ -46,7 +44,6 @@ const FEATURE_FIELDS: Array<{ key: string; label: string; help?: string }> = [
   { key: "koi_slogg", label: "Stellar log g" },
   { key: "koi_slogg_err1", label: "log g +σ" },
   { key: "koi_slogg_err2", label: "log g −σ" },
-  { key: "koi_srad", label: "Stellar Radius (R☉)" },
   { key: "koi_srad_err1", label: "Stellar Radius +σ" },
   { key: "koi_srad_err2", label: "Stellar Radius −σ" },
   { key: "ra", label: "Right Ascension" }
@@ -140,9 +137,14 @@ export default function Detector(): JSX.Element {
       return undefined;
     }
 
+    const koiScore = result.features.koi_score;
+    if (!Number.isFinite(koiScore)) {
+      return undefined;
+    }
+
     const nearest = [...allPlanets]
       .map((planet) => {
-        const delta = Math.abs((planet.koiScore ?? 0) - (result.features.koi_score ?? 0));
+        const delta = Math.abs((planet.koiScore ?? 0) - koiScore);
         return { planet, delta };
       })
       .sort((a, b) => a.delta - b.delta)[0];

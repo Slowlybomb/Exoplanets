@@ -11,8 +11,26 @@ CORS(app)
 MODEL_PATH = Path(__file__).with_name("model_test_1.joblib")
 SAMPLE_PATH = Path(__file__).with_name("test_data.json")
 
+# Columns that leak the target label and should never reach the model
+LEAKAGE_KEYS = {
+    "kepler_name",
+    "kepoi_name",
+    "koi_teq_err1",
+    "kepid",
+    "koi_disposition",
+    "koi_pdisposition",
+    "koi_fpflag_nt",
+    "koi_fpflag_ss",
+    "koi_fpflag_co",
+    "koi_fpflag_ec",
+    "koi_tce_delivname",
+    "koi_teq_err2",
+    "koi_kepmag",
+    "koi_srad",
+    "koi_score"
+}
+
 FEATURE_KEYS = [
-    "koi_score",
     "koi_period",
     "koi_period_err1",
     "koi_period_err2",
@@ -43,7 +61,6 @@ FEATURE_KEYS = [
     "koi_slogg",
     "koi_slogg_err1",
     "koi_slogg_err2",
-    "koi_srad",
     "koi_srad_err1",
     "koi_srad_err2",
     "ra"
@@ -54,20 +71,25 @@ model = joblib.load(MODEL_PATH)
 
 def load_sample() -> dict:
     with SAMPLE_PATH.open("r", encoding="utf-8") as f:
-        return json.load(f)
+        sample = json.load(f)
+
+    return {key: value for key, value in sample.items() if key not in LEAKAGE_KEYS}
 
 
-def prepare_payload(payload: dict) -> np.ndarray:
+def prepare_payload(payload: dict) -> tuple[np.ndarray, dict]:
     missing = [key for key in FEATURE_KEYS if key not in payload]
     if missing:
         raise ValueError(f"Missing features: {', '.join(missing)}")
 
-    try:
-        vector = [float(payload[key]) for key in FEATURE_KEYS]
-    except (ValueError, TypeError):
-        raise ValueError("All feature values must be numeric.")
+    prepared_features: dict[str, float] = {}
+    for key in FEATURE_KEYS:
+        try:
+            prepared_features[key] = float(payload[key])
+        except (ValueError, TypeError):
+            raise ValueError("All feature values must be numeric.")
 
-    return np.array([vector])
+    vector = [prepared_features[key] for key in FEATURE_KEYS]
+    return np.array([vector]), prepared_features
 
 
 @app.route("/")
@@ -79,17 +101,18 @@ def mainpage():
 def exoplanet():
     if request.method == "GET":
         sample = load_sample()
-        prediction = int(model.predict(prepare_payload(sample))[0])
-        return jsonify({"prediction": prediction, "features": sample})
+        features_vector, prepared = prepare_payload(sample)
+        prediction = int(model.predict(features_vector)[0])
+        return jsonify({"prediction": prediction, "features": prepared})
 
     payload = request.get_json(silent=True) or {}
     try:
-        features = prepare_payload(payload)
+        features_vector, prepared = prepare_payload(payload)
     except ValueError as exc:
         return jsonify({"error": str(exc)}), 400
 
-    prediction = int(model.predict(features)[0])
-    return jsonify({"prediction": prediction, "features": {key: float(payload[key]) for key in FEATURE_KEYS}})
+    prediction = int(model.predict(features_vector)[0])
+    return jsonify({"prediction": prediction, "features": prepared})
 
 
 if __name__ == "__main__":
