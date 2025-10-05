@@ -1,6 +1,6 @@
 import { useRef, RefObject, useState, useEffect } from "react";
 
-const spatialScale = 5;
+const spatialScale = 7;
 const sizeScale = 2;
 const maxZoom= 0.8;
 const minZoom = 2;
@@ -71,7 +71,7 @@ function generateRandomStars(n: number): Star[] {
     });
 }
 
-const sampleStars: Star[] = generateRandomStars(200);
+const sampleStars: Star[] = generateRandomStars(9000);
 
 function teffToColor(teff: number) {
     // B-V = (5040/Teff) - 0.5
@@ -109,9 +109,9 @@ function teffToColor(teff: number) {
 export default function StarMap({stars = sampleStars }: GalaxyMapProps) {
     const canvasRef: RefObject<HTMLCanvasElement> = useRef<HTMLCanvasElement>(null);
     const containerRef = useRef<HTMLDivElement>(null);
-    const [canvasSize, setCanvasSize] = useState({ width: 10, height: 10 });
+    const [canvasSize, setCanvasSize] = useState({ width: 1000, height: 600 });
     const [hoveredStar, setHoveredStar] = useState<Star | null>(null);
-    const [pan, setPan] = useState({ x: canvasSize.width / 2, y: canvasSize.height / 2 });
+    const [pan, setPan] = useState({ x: canvasSize.width/canvasSize.height, y: canvasSize.height/canvasSize.width });
     const [zoom, setZoom] = useState(1);
     const [isDragging, setIsDragging] = useState(false);
     const [lastPos, setLastPos] = useState({ x: 0, y: 0 });
@@ -135,6 +135,7 @@ export default function StarMap({stars = sampleStars }: GalaxyMapProps) {
     }, []);
 
 
+
     useEffect(() => {
         const canvas = canvasRef.current;
         if (!canvas) return;
@@ -152,13 +153,40 @@ export default function StarMap({stars = sampleStars }: GalaxyMapProps) {
             ctx.translate(pan.x, pan.y);
             ctx.scale(zoom, zoom);
 
+            // Grid
+            ctx.strokeStyle = 'rgba(255,255,255,0.3)';
+            ctx.lineWidth = 1 / zoom;
+
+            const raStep = 30;
+            const decStep = 15;
+
+            const leftRA = 0;
+            const rightRA = 360;
+            const bottomDec = -90;
+            const topDec = 90;
+
+            for (let ra = 0; ra <= 360; ra += raStep) {
+                const { x } = mapCoords(ra, 0, canvasSize.width, canvasSize.height, spatialScale);
+                ctx.beginPath();
+                ctx.moveTo(x, mapCoords(0, topDec, canvasSize.width, canvasSize.height, spatialScale).y);
+                ctx.lineTo(x, mapCoords(0, bottomDec, canvasSize.width, canvasSize.height, spatialScale).y);
+                ctx.stroke();
+            }
+
+            for (let dec = -90; dec <= 90 ; dec += decStep) {
+                const { y } = mapCoords(0, dec, canvasSize.width, canvasSize.height, spatialScale);
+                ctx.beginPath();
+                ctx.moveTo(mapCoords(leftRA,0 , canvasSize.width, canvasSize.height, spatialScale).x, y);
+                ctx.lineTo(mapCoords(rightRA, 0, canvasSize.width, canvasSize.height, spatialScale).x, y);
+                ctx.stroke();
+            }
+            // Stars
             stars.forEach((star) => {
                 const { x, y } = mapCoords(star.ra, star.dec, canvasSize.width, canvasSize.height, spatialScale);
                 const radius = normaliseRadius(star.srad, sizeScale);
                 const color = teffToColor(star.teff);
                 const brightness = Math.max(0.1, 1 - star.kepmag / 6);
 
-                // Glow
                 const gradient = ctx.createRadialGradient(x, y, 0, x, y, radius * 2);
                 gradient.addColorStop(0, color);
                 gradient.addColorStop(0.4, color);
@@ -168,7 +196,6 @@ export default function StarMap({stars = sampleStars }: GalaxyMapProps) {
                 ctx.arc(x, y, radius * 2, 0, Math.PI * 2);
                 ctx.fill();
 
-                // Star core
                 ctx.fillStyle = color;
                 ctx.beginPath();
                 ctx.arc(x, y, radius * 0.8 * brightness, 0, Math.PI * 2);
@@ -176,9 +203,8 @@ export default function StarMap({stars = sampleStars }: GalaxyMapProps) {
             });
 
             ctx.restore();
-
-
         };
+
 
         const render = () => {
 
@@ -193,16 +219,21 @@ export default function StarMap({stars = sampleStars }: GalaxyMapProps) {
             const mouseX = e.clientX - rect.left;
             const mouseY = e.clientY - rect.top;
 
-            const scaleFactor = e.deltaY > 0 ? 0.98 : 1.02;
+            const scaleFactor = e.deltaY > 0 ? 0.98 : 10.2;
 
-            setPan(prev => ({
-                x: mouseX - (mouseX - prev.x) * scaleFactor,
-                y: mouseY - (mouseY - prev.y) * scaleFactor
-            }));
+            setZoom(prevZoom => {
+                const newZoom = Math.max(maxZoom, Math.min(minZoom, prevZoom * scaleFactor));
+                const actualScale = newZoom / prevZoom;
 
-            setZoom(prev => Math.max(maxZoom, Math.min(minZoom, prev * scaleFactor)));
+                setPan(prevPan => ({
+                    x: mouseX - (mouseX - prevPan.x) * actualScale,
+                    y: mouseY - (mouseY - prevPan.y) * actualScale
+                }));
 
+                return newZoom;
+            });
         };
+
 
         render();
 
@@ -276,7 +307,7 @@ export default function StarMap({stars = sampleStars }: GalaxyMapProps) {
                 <span className="inline-flex items-center gap-2 rounded-full border border-brand-slate/40 bg-brand-indigo/60 px-3 py-1 text-xs font-semibold uppercase tracking-[0.4em] text-brand-slate/70">
                     Mapped Representation
                 </span>
-                <h1 className="text-3xl font-semibold text-brand-white sm:text-4xl lg:text-5xl">Planet Gallery</h1>
+                <h1 className="text-3xl font-semibold text-brand-white sm:text-4xl lg:text-5xl">Star Map</h1>
                 <p className="max-w-2xl text-base text-brand-slate/70 sm:text-lg">
                     Explore all the known stars found by the Kepler Mission in the KOI Database;
                 </p>
@@ -330,10 +361,10 @@ export default function StarMap({stars = sampleStars }: GalaxyMapProps) {
                             pointerEvents: "none"
                         }}
                     >
-                        <b style={{textAlign: 'center', width: "100%"}}>Star {hoveredStar.kepid}</b>
+                        <h1 style={{textAlign: 'center', width: "100%", fontWeight: "bold"}}>Star {hoveredStar.kepid}</h1>
                         <div
                             style={{
-                                top: 10,
+                            top: 10,
                                 right: 10,
                                 background: "rgba(0,0,0,0.7)",
                                 color: "white",
@@ -356,7 +387,7 @@ export default function StarMap({stars = sampleStars }: GalaxyMapProps) {
                             <span>{hoveredStar.teff.toFixed(0)}K</span>
                         </div>
                         <div>
-                            <span>KOIs:</span>
+                            <b>KOIs:</b>
                             <div
                                 style={{
                                     top: 10,
@@ -367,7 +398,7 @@ export default function StarMap({stars = sampleStars }: GalaxyMapProps) {
                                     padding: "5px 10px",
                                     borderRadius: "3px",
                                     display: 'grid',
-                                    gridTemplateColumns: '120px 80px',
+                                    gridTemplateColumns: '90px 110px',
                                     gap: '0px',
                                     textAlign: 'right'
                                 }}
@@ -375,7 +406,7 @@ export default function StarMap({stars = sampleStars }: GalaxyMapProps) {
                                 <span>Kepler-227 c</span>
                                 <span>CONFIRMED</span>
                                 <span>Kepler-227 d</span>
-                                <span>FALSE POSITIVE</span>
+                                <span>FALSE_POSITIVE</span>
                             </div>
                         </div>
 
