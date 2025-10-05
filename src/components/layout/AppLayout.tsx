@@ -1,15 +1,15 @@
 import { useCallback, useMemo, useState, type MouseEvent as ReactMouseEvent } from "react";
 import { useLocation, useNavigate } from "react-router-dom";
-import { LayoutDashboard, Orbit, PieChart, Sparkles, Table2, Columns3, Map, Bot } from "lucide-react";
+import { LayoutDashboard, Orbit, Sparkles, Table2, Columns3, Map, Bot } from "lucide-react";
 import type { ReactNode } from "react";
 import { Sidebar, type NavItem } from "./Sidebar";
 
 const navigation: NavItem[] = [
   {
-    title: "Overview",
-    path: "/overview",
+    title: "Analytics",
+    path: "/analytics",
     icon: LayoutDashboard,
-    description: "Mission summary"
+    description: "Disposition & mission metrics"
   },
   {
     title: "Gallery",
@@ -36,20 +36,14 @@ const navigation: NavItem[] = [
     description: "Side-by-side planets"
   },
   {
-    title: "Analytics",
-    path: "/analytics",
-    icon: PieChart,
-    description: "Disposition & rankings"
-  },
-    {
-        title: "Star Map",
-        path: "/starmap",
-        icon: Map,
-        description: "Map of stars with KOI data"
-    },
+    title: "Star Map",
+    path: "/starmap",
+    icon: Map,
+    description: "Map of stars with KOI data"
+  }
 ];
 
-const fallbackNav = navigation[0]?.path ?? "/overview";
+const fallbackNav = "/analytics";
 
 type AppLayoutProps = {
   children: ReactNode;
