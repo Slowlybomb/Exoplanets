@@ -1,12 +1,20 @@
-import { FormEvent, useMemo, useState } from "react";
+import { ChangeEvent, FormEvent, useMemo, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { Card } from "../components/ui/Card";
-import { PlanetGallery } from "../components/PlanetGallery";
 import { getAllFeaturedPlanets, type FeaturedPlanet } from "../data/exoplanets";
 
 type PredictionResponse = {
   prediction: number;
-  features: Record<string, number | undefined>;
+  features: Record<string, number>;
+  probability?: number;
+  error?: string;
+};
+
+type BatchPrediction = {
+  index: number;
+  prediction?: number;
+  probability?: number;
+  features?: Record<string, number>;
   error?: string;
 };
 
@@ -53,6 +61,15 @@ export default function Detector(): JSX.Element {
   const navigate = useNavigate();
   const allPlanets = useMemo(() => getAllFeaturedPlanets(), []);
 
+  const numberFormatter = useMemo(
+    () =>
+      new Intl.NumberFormat("en-US", {
+        maximumFractionDigits: 2,
+        minimumFractionDigits: 0
+      }),
+    []
+  );
+
   const [formState, setFormState] = useState<FormState>(() => {
     const defaults: FormState = {};
     FEATURE_FIELDS.forEach(({ key }) => {
@@ -64,15 +81,70 @@ export default function Detector(): JSX.Element {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [result, setResult] = useState<PredictionResponse | null>(null);
+  const [batchResults, setBatchResults] = useState<BatchPrediction[]>([]);
+  const [selectedFile, setSelectedFile] = useState<File | null>(null);
+  const [activeOperation, setActiveOperation] = useState<"single" | "batch" | null>(null);
 
   const handleChange = (key: string, value: string) => {
     setFormState((prev) => ({ ...prev, [key]: value }));
   };
 
+  const handleFileChange = (event: ChangeEvent<HTMLInputElement>) => {
+    const file = event.target.files?.[0] ?? null;
+    setSelectedFile(file);
+    setBatchResults([]);
+    setError(null);
+    if (file) {
+      setResult(null);
+    }
+    // Allow re-selecting the same file without requiring manual clearing.
+    event.target.value = "";
+  };
+
+  const runBatchDetection = async () => {
+    if (!selectedFile) {
+      setError("Select a JSON or CSV file before running batch detection.");
+      return;
+    }
+
+    setLoading(true);
+    setActiveOperation("batch");
+    setError(null);
+    setResult(null);
+    setBatchResults([]);
+
+    try {
+      const formData = new FormData();
+      formData.append("file", selectedFile);
+
+      const response = await fetch(API_URL, {
+        method: "POST",
+        body: formData
+      });
+
+      const payload = (await response.json()) as { results?: BatchPrediction[]; error?: string };
+
+      if (!response.ok || payload.error) {
+        throw new Error(payload.error ?? "Batch detection failed");
+      }
+
+      setBatchResults(Array.isArray(payload.results) ? payload.results : []);
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "Batch detection failed");
+      setBatchResults([]);
+    } finally {
+      setLoading(false);
+      setActiveOperation(null);
+    }
+  };
+
   const handleSubmit = async (event: FormEvent<HTMLFormElement>) => {
     event.preventDefault();
     setLoading(true);
+    setActiveOperation("single");
     setError(null);
+    setBatchResults([]);
+    setResult(null);
 
     try {
       const response = await fetch(API_URL, {
@@ -93,12 +165,16 @@ export default function Detector(): JSX.Element {
       setResult(null);
     } finally {
       setLoading(false);
+      setActiveOperation(null);
     }
   };
 
   const loadSample = async () => {
     setLoading(true);
     setError(null);
+    setActiveOperation("single");
+    setBatchResults([]);
+    setResult(null);
 
     try {
       const response = await fetch(API_URL);
@@ -117,6 +193,7 @@ export default function Detector(): JSX.Element {
       setResult(null);
     } finally {
       setLoading(false);
+      setActiveOperation(null);
     }
   };
 
@@ -130,27 +207,68 @@ export default function Detector(): JSX.Element {
     });
     setResult(null);
     setError(null);
+    setBatchResults([]);
+    setSelectedFile(null);
   };
 
-  const resultPlanet: FeaturedPlanet | undefined = useMemo(() => {
+  const resultMatch = useMemo(() => {
     if (!result || result.prediction !== 1) {
       return undefined;
     }
 
-    const koiScore = result.features.koi_score;
-    if (typeof koiScore !== "number" || !Number.isFinite(koiScore)) {
+    const targetRadius = result.features.koi_prad;
+    if (typeof targetRadius !== "number" || !Number.isFinite(targetRadius)) {
       return undefined;
     }
 
+    const targetPeriod = result.features.koi_period;
+    const targetInsolation = result.features.koi_insol;
+
     const nearest = [...allPlanets]
       .map((planet) => {
-        const delta = Math.abs((planet.koiScore ?? 0) - koiScore);
-        return { planet, delta };
+        const radius = planet.planetRadiusEarth;
+        const radiusDelta = radius !== null && Number.isFinite(radius) ? Math.abs(radius - targetRadius) : null;
+
+        const period = planet.periodDays;
+        const periodDelta =
+          period !== null && Number.isFinite(period) && typeof targetPeriod === "number"
+            ? Math.abs(period - targetPeriod)
+            : null;
+
+        const insolation = planet.insolationEarth;
+        const insolationDelta =
+          insolation !== null && Number.isFinite(insolation) && typeof targetInsolation === "number"
+            ? Math.abs(insolation - targetInsolation)
+            : null;
+
+        return {
+          planet,
+          delta: radiusDelta ?? Number.POSITIVE_INFINITY,
+          radiusDelta,
+          periodDelta,
+          insolationDelta
+        };
       })
       .sort((a, b) => a.delta - b.delta)[0];
 
-    return nearest?.planet;
+    if (!nearest || !Number.isFinite(nearest.delta)) {
+      return undefined;
+    }
+
+    return {
+      planet: nearest.planet,
+      radiusDelta: nearest.radiusDelta ?? null,
+      periodDelta: nearest.periodDelta ?? null,
+      insolationDelta: nearest.insolationDelta ?? null
+    };
   }, [result, allPlanets]);
+
+  const batchSuccessCount = useMemo(
+    () => batchResults.reduce((count, entry) => (entry.error ? count : count + 1), 0),
+    [batchResults]
+  );
+  const batchFailureCount = batchResults.length - batchSuccessCount;
+  const hasBatchResults = batchResults.length > 0;
 
   return (
     <main className="flex w-full flex-col gap-8 px-6 py-10 sm:px-8 sm:py-12 lg:px-12 lg:py-16">
@@ -216,40 +334,188 @@ export default function Detector(): JSX.Element {
               </button>
             </div>
           </form>
+
+          <section className="mt-6 space-y-3 rounded-2xl border border-brand-slate/35 bg-brand-indigo/30 p-4">
+            <header className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
+              <div>
+                <h3 className="text-xs font-semibold uppercase tracking-[0.3em] text-brand-white/90">Batch detection</h3>
+                <p className="text-[11px] uppercase tracking-[0.2em] text-brand-slate/60">Upload JSON or CSV data pack</p>
+              </div>
+              {selectedFile && (
+                <span className="truncate text-[11px] uppercase tracking-[0.2em] text-brand-accent">{selectedFile.name}</span>
+              )}
+            </header>
+
+            <div className="flex flex-col gap-3 sm:flex-row sm:items-center">
+              <label className="flex cursor-pointer items-center justify-center rounded-xl border border-dashed border-brand-slate/40 bg-brand-midnight/40 px-4 py-3 text-xs uppercase tracking-[0.3em] text-brand-slate/70 transition hover:border-brand-accent hover:text-brand-accent">
+                <input
+                  type="file"
+                  accept=".json,.csv,application/json,text/csv"
+                  onChange={handleFileChange}
+                  className="hidden"
+                />
+                Select file
+              </label>
+
+              <button
+                type="button"
+                onClick={runBatchDetection}
+                className="rounded-full border border-brand-accent bg-brand-accent/10 px-5 py-2 text-xs font-semibold uppercase tracking-[0.3em] text-brand-accent transition hover:bg-brand-accent/20 disabled:opacity-40"
+                disabled={loading || !selectedFile}
+              >
+                {activeOperation === "batch" ? "Uploading..." : "Run batch"}
+              </button>
+            </div>
+
+            <p className="text-[11px] uppercase tracking-[0.2em] text-brand-slate/50">
+              Provide multiple KOI records at once. JSON arrays and CSV headers must match the detector feature keys.
+            </p>
+          </section>
         </Card>
 
         <Card title="Result" description="Model verdict">
           {loading ? (
-            <p className="text-sm text-brand-slate/60">Contacting backend detector...</p>
+            <p className="text-sm text-brand-slate/60">
+              {activeOperation === "batch" ? "Uploading data pack to the detector..." : "Contacting backend detector..."}
+            </p>
           ) : error ? (
             <p className="text-sm text-red-400">{error}</p>
-          ) : result ? (
-            <div className="space-y-4">
-              <div className="space-y-2">
-                <p className="text-xs uppercase tracking-[0.3em] text-brand-slate/60">Prediction</p>
-                <p className={`text-2xl font-semibold ${result.prediction === 1 ? "text-brand-accent" : "text-brand-slate/50"}`}>
-                  {result.prediction === 1 ? "Likely planet" : "Likely false positive"}
-                </p>
-              </div>
-
-              <div className="space-y-2 text-xs uppercase tracking-[0.25em] text-brand-slate/60">
-                <p>Input summary</p>
-                <pre className="h-48 overflow-auto rounded-2xl border border-brand-slate/30 bg-brand-midnight/60 p-4 text-[11px] text-brand-white/80">
-{JSON.stringify(result.features, null, 2)}
-                </pre>
-              </div>
-
-              {resultPlanet ? (
-                <div className="space-y-3">
-                  <p className="text-xs uppercase tracking-[0.3em] text-brand-slate/60">Closest catalogued match</p>
-                  <PlanetGallery
-                    planets={[resultPlanet]}
-                    selectedPlanetName={resultPlanet.name}
-                    onSelectOrbit={(planet) => {
-                      navigate(`/planet/${encodeURIComponent(planet.name)}`);
-                    }}
-                  />
+          ) : hasBatchResults ? (
+            <div className="space-y-5">
+              <header className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
+                <div className="space-y-1">
+                  <span className="rounded-full border border-brand-accent/40 px-3 py-1 text-[11px] font-semibold uppercase tracking-[0.3em] text-brand-accent">
+                    Batch predictions
+                  </span>
+                  <p className="text-[11px] uppercase tracking-[0.25em] text-brand-slate/60">
+                    {batchSuccessCount} successes / {batchFailureCount} errors
+                  </p>
                 </div>
+                <span className="text-[11px] uppercase tracking-[0.25em] text-brand-slate/60">
+                  {batchResults.length} records processed
+                </span>
+              </header>
+
+              <div className="max-h-80 space-y-3 overflow-auto pr-1">
+                {batchResults.map((entry) => {
+                  const isPlanet = entry.prediction === 1;
+                  const statusLabel = entry.error
+                    ? "Error"
+                    : isPlanet
+                      ? "Likely planet"
+                      : "Likely false positive";
+                  const statusClass = entry.error
+                    ? "text-red-400"
+                    : isPlanet
+                      ? "text-brand-accent"
+                      : "text-brand-slate/40";
+                  const radius = entry.features?.koi_prad;
+                  const period = entry.features?.koi_period;
+                  const radiusDisplay =
+                    typeof radius === "number" && Number.isFinite(radius)
+                      ? `${numberFormatter.format(radius)} R⊕`
+                      : "Unknown";
+                  const periodDisplay =
+                    typeof period === "number" && Number.isFinite(period)
+                      ? `${numberFormatter.format(period)} days`
+                      : "Unknown";
+
+                  return (
+                    <article
+                      key={entry.index}
+                      className="space-y-3 rounded-2xl border border-brand-slate/35 bg-brand-indigo/40 p-4"
+                    >
+                      <div className="flex flex-wrap items-center justify-between gap-2">
+                        <span className="text-[11px] uppercase tracking-[0.3em] text-brand-slate/60">
+                          Row #{entry.index + 1}
+                        </span>
+                        <span className={`text-xs font-semibold uppercase tracking-[0.3em] ${statusClass}`}>
+                          {statusLabel}
+                        </span>
+                      </div>
+
+                      {entry.error ? (
+                        <p className="text-sm text-red-300">{entry.error}</p>
+                      ) : (
+                        <div className="space-y-3 text-sm text-brand-white/80">
+                          {typeof entry.probability === "number" && (
+                            <ConfidencePill probability={entry.probability} />
+                          )}
+
+                          <div className="grid grid-cols-1 gap-2 text-[11px] uppercase tracking-[0.25em] text-brand-slate/60 sm:grid-cols-2">
+                            <span>Radius: {radiusDisplay}</span>
+                            <span>Period: {periodDisplay}</span>
+                          </div>
+
+                          <pre className="max-h-40 overflow-auto rounded-xl border border-brand-slate/30 bg-brand-midnight/40 p-3 text-[11px] leading-relaxed text-brand-white/70">
+{JSON.stringify(entry.features ?? {}, null, 2)}
+                          </pre>
+                        </div>
+                      )}
+                    </article>
+                  );
+                })}
+              </div>
+            </div>
+          ) : result ? (
+            <div className="space-y-6">
+              <div className="grid gap-4 lg:grid-cols-[1.2fr_0.8fr]">
+                <div className="space-y-4 rounded-3xl border border-brand-slate/35 bg-brand-indigo/40 p-6 shadow-card-glow">
+                  <div className="flex items-center justify-between">
+                    <span className="rounded-full border border-brand-accent/40 px-3 py-1 text-[11px] font-semibold uppercase tracking-[0.3em] text-brand-accent">
+                      Prediction
+                    </span>
+                    {typeof result.probability === "number" && (
+                      <ConfidencePill probability={result.probability} />
+                    )}
+                  </div>
+
+                  <div className="space-y-3">
+                    <h2 className={`text-3xl font-semibold ${result.prediction === 1 ? "text-brand-accent" : "text-brand-slate/30"}`}>
+                      {result.prediction === 1 ? "Likely planet" : "Likely false positive"}
+                    </h2>
+                    <p className="text-sm text-brand-slate/60">
+                      The classifier analyses transit depth, orbital period, star properties, and other KOI metrics to estimate whether the
+                      candidate represents a real exoplanet.
+                    </p>
+                  </div>
+
+                  <ul className="grid gap-3 text-xs uppercase tracking-[0.25em] text-brand-slate/60 md:grid-cols-2">
+                    <MetricBadge
+                      label="Radius"
+                      value={`${numberFormatter.format(result.features.koi_prad)} R⊕`}
+                    />
+                    <MetricBadge
+                      label="Orbital period"
+                      value={`${numberFormatter.format(result.features.koi_period)} days`}
+                    />
+                    <MetricBadge
+                      label="Equilibrium temp"
+                      value={`${numberFormatter.format(result.features.koi_teq)} K`}
+                    />
+                    <MetricBadge
+                      label="Stellar Teff"
+                      value={`${numberFormatter.format(result.features.koi_steff)} K`}
+                    />
+                  </ul>
+                </div>
+
+                <div className="rounded-3xl border border-brand-slate/35 bg-brand-midnight/60 p-6 text-xs uppercase tracking-[0.25em] text-brand-slate/60">
+                  <p className="mb-3 font-semibold">Input summary</p>
+                  <pre className="h-60 overflow-auto rounded-2xl border border-brand-slate/30 bg-brand-indigo/40 p-4 text-[11px] text-brand-white/80">
+{JSON.stringify(result.features, null, 2)}
+                  </pre>
+                </div>
+              </div>
+
+              {resultMatch ? (
+                <ClosestMatchPanel
+                  match={resultMatch}
+                  numberFormatter={numberFormatter}
+                  onViewDetails={() => {
+                    navigate(`/planet/${encodeURIComponent(resultMatch.planet.name)}`);
+                  }}
+                />
               ) : (
                 <p className="text-xs uppercase tracking-[0.3em] text-brand-slate/60">
                   No matching confirmed planet found in the current catalog.
@@ -257,11 +523,146 @@ export default function Detector(): JSX.Element {
               )}
             </div>
           ) : (
-            <p className="text-sm text-brand-slate/60">Submit KOI metrics to run the detector.</p>
+            <p className="text-sm text-brand-slate/60">
+              Submit KOI metrics or upload a file to run the detector.
+            </p>
           )}
         </Card>
       </section>
     </main>
+  );
+}
+
+type ClosestMatch = {
+  planet: FeaturedPlanet;
+  radiusDelta: number | null;
+  periodDelta: number | null;
+  insolationDelta: number | null;
+};
+
+type ClosestMatchPanelProps = {
+  match: ClosestMatch;
+  numberFormatter: Intl.NumberFormat;
+  onViewDetails: () => void;
+};
+
+function ClosestMatchPanel({ match, numberFormatter, onViewDetails }: ClosestMatchPanelProps): JSX.Element {
+  const { planet, radiusDelta, periodDelta, insolationDelta } = match;
+
+  const formatDelta = (value: number | null, unit: string): string => {
+    if (value === null || !Number.isFinite(value)) {
+      return "No data";
+    }
+    return `${numberFormatter.format(value)} ${unit}`;
+  };
+
+  const formatValue = (value: number | null, unit: string): string => {
+    if (value === null || !Number.isFinite(value)) {
+      return "Unknown";
+    }
+    return `${numberFormatter.format(value)}${unit}`;
+  };
+
+  return (
+    <section className="space-y-4 rounded-3xl border border-brand-slate/35 bg-brand-indigo/40 p-6">
+      <header className="flex flex-col gap-2 md:flex-row md:items-center md:justify-between">
+        <div>
+          <p className="text-xs uppercase tracking-[0.3em] text-brand-slate/60">Closest catalogued match</p>
+          <h3 className="text-2xl font-semibold text-brand-white">{planet.name}</h3>
+          <p className="font-mono text-xs uppercase tracking-[0.2em] text-brand-slate/50">{planet.catalogId}</p>
+        </div>
+        <div className="flex flex-wrap items-center gap-2">
+          <span className="rounded-full border border-brand-slate/40 px-3 py-1 text-[11px] font-semibold uppercase tracking-[0.3em] text-brand-slate/60">
+            {planet.disposition}
+          </span>
+          <button
+            type="button"
+            onClick={onViewDetails}
+            className="rounded-full border border-brand-accent/60 bg-brand-accent/10 px-4 py-1 text-xs font-semibold uppercase tracking-[0.3em] text-brand-accent transition hover:bg-brand-accent/20"
+          >
+            View planet page
+          </button>
+        </div>
+      </header>
+
+      <div className="grid gap-4 md:grid-cols-3">
+        <MatchMetric
+          title="Radius"
+          value={formatValue(planet.planetRadiusEarth, " R⊕")}
+          delta={formatDelta(radiusDelta, "R⊕ difference")}
+        />
+        <MatchMetric
+          title="Orbital period"
+          value={formatValue(planet.periodDays, " days")}
+          delta={formatDelta(periodDelta, "days difference")}
+        />
+        <MatchMetric
+          title="Insolation"
+          value={formatValue(planet.insolationEarth, " S⊕")}
+          delta={formatDelta(insolationDelta, "S⊕ difference")}
+        />
+      </div>
+
+      <p className="text-sm text-brand-slate/60">
+        Differences highlight how closely the detected candidate aligns with the best match in NASA's public KOI catalogue. Explore the
+        planet page to dive into orbital characteristics, discovery method, and additional literature links.
+      </p>
+    </section>
+  );
+}
+
+type MatchMetricProps = {
+  title: string;
+  value: string;
+  delta: string;
+};
+
+function MatchMetric({ title, value, delta }: MatchMetricProps): JSX.Element {
+  return (
+    <article className="space-y-2 rounded-2xl border border-brand-slate/30 bg-brand-midnight/40 p-4">
+      <p className="text-xs uppercase tracking-[0.3em] text-brand-slate/60">{title}</p>
+      <p className="text-lg font-semibold text-brand-white">{value}</p>
+      <p className="text-[11px] uppercase tracking-[0.25em] text-brand-slate/50">Δ {delta}</p>
+    </article>
+  );
+}
+
+type MetricBadgeProps = {
+  label: string;
+  value: string;
+};
+
+function MetricBadge({ label, value }: MetricBadgeProps): JSX.Element {
+  return (
+    <li className="rounded-2xl border border-brand-slate/30 bg-brand-midnight/40 p-3 text-brand-white/80">
+      <span className="block text-[10px] font-semibold uppercase tracking-[0.3em] text-brand-slate/60">{label}</span>
+      <span className="text-sm font-semibold text-brand-white">{value}</span>
+    </li>
+  );
+}
+
+type ConfidencePillProps = {
+  probability: number;
+};
+
+function ConfidencePill({ probability }: ConfidencePillProps): JSX.Element {
+  const clamped = Math.max(0, Math.min(1, probability));
+  const percentage = clamped * 100;
+
+  let label = "Moderate confidence";
+  if (percentage >= 80) {
+    label = "High confidence";
+  } else if (percentage <= 40) {
+    label = "Low confidence";
+  }
+
+  return (
+    <span className="inline-flex items-center gap-2 rounded-full border border-brand-slate/40 bg-brand-midnight/40 px-3 py-1 text-[11px] font-semibold uppercase tracking-[0.3em] text-brand-white/80">
+      {label}
+      <span className="rounded-full bg-brand-accent/70 px-2 py-[2px] text-[10px] font-semibold text-brand-midnight">
+        {percentage.toFixed(0)}%
+      </span>
+    </span>
   );
 }
 
