@@ -341,6 +341,10 @@ export default function StarMap({ stars: providedStars = sampleStars }: GalaxyMa
         setHoveredStar(hoverStar || null);
     };
 
+    const tooltipPosition = hoveredStar
+        ? mapCoordsDynamic(hoveredStar, bounds, canvasSize.width, canvasSize.height, spatialScale)
+        : null;
+
     return (
         <main className="mx-auto flex w-full max-w-6xl flex-col gap-8 px-4 py-10 sm:px-6 sm:py-12 lg:px-10 lg:py-16">
             <header className="space-y-4">
@@ -391,8 +395,8 @@ export default function StarMap({ stars: providedStars = sampleStars }: GalaxyMa
                     <div
                         style={{
                             position: "absolute",
-                            top: bounds ? mapCoordsDynamic(hoveredStar, bounds, canvasSize.width, canvasSize.height, spatialScale).y * zoom + pan.y : 0,
-                            left: bounds ? mapCoordsDynamic(hoveredStar, bounds, canvasSize.width, canvasSize.height, spatialScale).x * zoom + pan.x : 0,
+                            top: tooltipPosition ? tooltipPosition.y * zoom + pan.y : 0,
+                            left: tooltipPosition ? tooltipPosition.x * zoom + pan.x : 0,
                             background: "rgba(0,0,0,0.7)",
                             color: "white",
                             font: "12px monospace",
