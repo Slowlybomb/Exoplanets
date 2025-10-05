@@ -4,10 +4,11 @@ import React from "react";
 
 const spatialScale = 15;
 const sizeScale = 100;
-const maxZoom= 10;
+const maxZoom = 10;
 const minZoom = 0.05;
 
-let bounds: { minRA: number; maxRA: number; minDec: number; maxDec: number; };
+type Bounds = { minRA: number; maxRA: number; minDec: number; maxDec: number };
+let bounds: Bounds | null = null;
 
 enum KeplerObjectType {
     CONFIRMED = "CONFIRMED",
@@ -121,22 +122,29 @@ function getBounds(stars: Star[]) {
 }
 
 
-<<<<<<< HEAD
-function mapCoordsDynamic(star: Star, bounds: {minRA: number, maxRA: number, minDec: number, maxDec: number}, width: number, height: number, scale = 1) {
-    const { minRA, maxRA, minDec, maxDec } = bounds;
+function mapCoordsDynamic(
+    star: Star,
+    currentBounds: Bounds | null,
+    width: number,
+    height: number,
+    scale = 1
+) {
+    if (!currentBounds) {
+        return mapCoords(star.ra, star.dec, width, height, scale);
+    }
 
-    const x = ((star.ra - minRA) / (maxRA - minRA)) * width * scale;
-    const y = ((maxDec - star.dec) / (maxDec - minDec)) * height * scale; // flip Dec for canvas y
+    const { minRA, maxRA, minDec, maxDec } = currentBounds;
+    const raRange = Math.max(maxRA - minRA, Number.EPSILON);
+    const decRange = Math.max(maxDec - minDec, Number.EPSILON);
+
+    const x = ((star.ra - minRA) / raRange) * width * scale;
+    const y = ((maxDec - star.dec) / decRange) * height * scale;
 
     return { x, y };
 }
 
 
-
-export default function StarMap({}: GalaxyMapProps) {
-=======
-export default function StarMap({ stars = sampleStars }: GalaxyMapProps) {
->>>>>>> d35f4e4 (merge?)
+export default function StarMap({ stars: providedStars = sampleStars }: GalaxyMapProps) {
     const canvasRef: RefObject<HTMLCanvasElement> = useRef<HTMLCanvasElement>(null);
     const containerRef = useRef<HTMLDivElement>(null);
     const [canvasSize, setCanvasSize] = useState({ width: 1000, height: 600 });
@@ -146,20 +154,31 @@ export default function StarMap({ stars = sampleStars }: GalaxyMapProps) {
     const [isDragging, setIsDragging] = useState(false);
     const [lastPos, setLastPos] = useState({ x: 0, y: 0 });
     const [currentPosition, setCurrentPosition] = useState<{ ra: number, dec: number } | null>(null);
-    const [stars, setStars] = useState<Star[]>([]);
+    const [starData, setStarData] = useState<Star[]>(providedStars ?? []);
 
     let needsRedraw = true;
 
     useEffect(() => {
+        if (providedStars && providedStars.length > 0) {
+            bounds = getBounds(providedStars);
+            return;
+        }
+
         loadStarsFromCsv("/kepler_data.csv")
             .then((data) => {
                 console.log(`Loaded ${data.length} unique stars`);
                 console.log("First star:", data[0]);
-                setStars(data);
-                bounds = getBounds(data)
+                setStarData(data);
+                bounds = getBounds(data);
             })
             .catch(console.error);
-    }, []);
+    }, [providedStars]);
+
+    useEffect(() => {
+        if (starData.length > 0) {
+            bounds = getBounds(starData);
+        }
+    }, [starData]);
 
     useEffect(() => {
         const container = containerRef.current;
@@ -222,7 +241,7 @@ export default function StarMap({ stars = sampleStars }: GalaxyMapProps) {
             }
 
 
-            stars.forEach(star => {
+            starData.forEach(star => {
                 const { x, y } = mapCoordsDynamic(star, bounds, canvasSize.width, canvasSize.height, spatialScale);
 
                 const radius = normaliseRadius(star.srad, sizeScale);
@@ -261,10 +280,6 @@ export default function StarMap({ stars = sampleStars }: GalaxyMapProps) {
             const mouseY = e.clientY - rect.top;
 
             const scaleFactor = e.deltaY > 0 ? 0.98 : 1.02;
-<<<<<<< HEAD
-=======
-
->>>>>>> d35f4e4 (merge?)
             setZoom(prevZoom => {
                 const newZoom = Math.min(maxZoom, Math.max(minZoom, prevZoom * scaleFactor));
                 const actualScale = newZoom / prevZoom;
@@ -288,7 +303,7 @@ export default function StarMap({ stars = sampleStars }: GalaxyMapProps) {
             cancelAnimationFrame(animationFrameId);
             canvas.removeEventListener('wheel', wheelHandler);
         }
-    }, [stars, canvasSize.width, canvasSize.height, pan, zoom]);
+    }, [starData, canvasSize.width, canvasSize.height, pan, zoom]);
 
     const handleMouseDown = (e: React.MouseEvent<HTMLCanvasElement>) => {
         setIsDragging(true);
@@ -317,14 +332,9 @@ export default function StarMap({ stars = sampleStars }: GalaxyMapProps) {
         setCurrentPosition({ ra, dec });
 
 
-        const hoverStar = stars.find(star => {
-<<<<<<< HEAD
+        const hoverStar = starData.find(star => {
             const { x, y } = mapCoordsDynamic(star, bounds, canvasSize.width, canvasSize.height, spatialScale);
             const radius = normaliseRadius(star.srad, sizeScale);
-=======
-            const { x, y } = mapCoords(star.ra, star.dec, canvasSize.width, canvasSize.height, spatialScale);
-            const radius = normaliseRadius(star.srad);
->>>>>>> d35f4e4 (merge?)
             return Math.hypot(mouseX - x, mouseY - y) <= radius;
         });
 
@@ -381,15 +391,9 @@ export default function StarMap({ stars = sampleStars }: GalaxyMapProps) {
                     <div
                         style={{
                             position: "absolute",
-<<<<<<< HEAD
                             top: bounds ? mapCoordsDynamic(hoveredStar, bounds, canvasSize.width, canvasSize.height, spatialScale).y * zoom + pan.y : 0,
                             left: bounds ? mapCoordsDynamic(hoveredStar, bounds, canvasSize.width, canvasSize.height, spatialScale).x * zoom + pan.x : 0,
                             background: "rgba(0,0,0,0.7)",
-=======
-                            top: mapCoords(hoveredStar.ra, hoveredStar.dec, canvasSize.width, canvasSize.height, spatialScale).y * zoom + pan.y - 10,
-                            left: mapCoords(hoveredStar.ra, hoveredStar.dec, canvasSize.width, canvasSize.height, spatialScale).x * zoom + pan.x,
-                            background: "rgba(0, 0, 0, 0.75)",
->>>>>>> d35f4e4 (merge?)
                             color: "white",
                             font: "12px monospace",
                             padding: "8px 12px",
@@ -420,7 +424,6 @@ export default function StarMap({ stars = sampleStars }: GalaxyMapProps) {
                             <span>{hoveredStar.teff.toFixed(0)} K</span>
                         </div>
                         <div>
-<<<<<<< HEAD
                             <b>KOIs:</b>
                             <div
                                 style={{
@@ -450,21 +453,6 @@ export default function StarMap({ stars = sampleStars }: GalaxyMapProps) {
                                     </React.Fragment>
                                 ))}
                             </div>
-=======
-                            <strong>KOIs:</strong>
-                            {hoveredStar.keplerObjects.size > 0 ? (
-                                <ul style={{ listStyle: "none", margin: "4px 0 0", padding: 0, display: "grid", gap: "2px" }}>
-                                    {Array.from(hoveredStar.keplerObjects.entries()).map(([koi, disposition]) => (
-                                        <li key={koi} style={{ display: "flex", justifyContent: "space-between", gap: "12px" }}>
-                                            <span>{koi}</span>
-                                            <span>{disposition}</span>
-                                        </li>
-                                    ))}
-                                </ul>
-                            ) : (
-                                <p style={{ margin: "4px 0 0" }}>No recorded KOIs.</p>
-                            )}
->>>>>>> d35f4e4 (merge?)
                         </div>
                     </div>
                 )}
