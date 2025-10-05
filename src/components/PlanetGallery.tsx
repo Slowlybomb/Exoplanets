@@ -5,6 +5,7 @@ import { InfoTooltip } from "./ui/InfoTooltip";
 
 type PlanetGalleryProps = {
   planets: FeaturedPlanet[];
+  selectedPlanetName?: string;
   favoriteIds?: string[];
   onToggleFavorite?: (planet: FeaturedPlanet) => void;
   onSelectOrbit?: (planet: FeaturedPlanet) => void;
@@ -30,7 +31,7 @@ function formatValue(value: number | null | undefined, unit: string, digits = 2)
   return unit ? `${formatted} ${unit}` : formatted;
 }
 
-export function PlanetGallery({ planets, favoriteIds, onToggleFavorite, onSelectOrbit }: PlanetGalleryProps): JSX.Element {
+export function PlanetGallery({ planets, selectedPlanetName, favoriteIds, onToggleFavorite, onSelectOrbit }: PlanetGalleryProps): JSX.Element {
   const posters = useMemo(
     () =>
       planets.map((planet) => {
@@ -58,11 +59,14 @@ export function PlanetGallery({ planets, favoriteIds, onToggleFavorite, onSelect
     <div className="grid gap-6 md:grid-cols-2 xl:grid-cols-3">
       {posters.map(({ planet, texture, periodLabel, radiusLabel, distanceLabel, brightnessLabel }) => {
         const isFavorited = favoriteIds?.includes(planet.catalogId) ?? false;
+        const isSelected = selectedPlanetName === planet.name;
 
         return (
           <article
             key={planet.name}
-            className="group relative overflow-hidden rounded-3xl border border-brand-slate/35 bg-brand-midnight shadow-card-glow transition hover:-translate-y-1 hover:shadow-xl"
+            className={`group relative overflow-hidden rounded-3xl border ${
+              isSelected ? "border-brand-accent/60" : "border-brand-slate/35"
+            } bg-brand-midnight shadow-card-glow transition hover:-translate-y-1 hover:shadow-xl`}
           >
             <div
               className="h-48 w-full transition duration-700 group-hover:scale-105"
@@ -135,7 +139,11 @@ export function PlanetGallery({ planets, favoriteIds, onToggleFavorite, onSelect
                     <button
                       type="button"
                       onClick={() => onSelectOrbit(planet)}
-                      className="inline-flex items-center gap-2 rounded-full border border-brand-slate/50 bg-transparent px-4 py-2 text-xs font-semibold uppercase tracking-[0.2em] text-brand-white transition hover:border-brand-accent hover:text-brand-accent"
+                      className={`inline-flex items-center gap-2 rounded-full border px-4 py-2 text-xs font-semibold uppercase tracking-[0.2em] transition ${
+                        isSelected
+                          ? "border-brand-accent bg-brand-accent/20 text-brand-accent"
+                          : "border-brand-slate/50 bg-transparent text-brand-white hover:border-brand-accent hover:text-brand-accent"
+                      }`}
                     >
                       View orbit
                     </button>

@@ -7,6 +7,7 @@ import Analytics from "./pages/Analytics";
 import PlanetDetail from "./pages/PlanetDetail";
 import Compare from "./pages/Compare";
 import StarMap from "./pages/StarMap";
+import Detector from "./pages/Detector";
 
 function App(): JSX.Element {
   return (
@@ -17,6 +18,7 @@ function App(): JSX.Element {
           <Route path="/overview" element={<Overview />} />
           <Route path="/gallery" element={<Gallery />} />
           <Route path="/orbit" element={<OrbitLab />} />
+          <Route path="/detector" element={<Detector />} />
           <Route path="/compare" element={<Compare />} />
           <Route path="/analytics" element={<Analytics />} />
           <Route path="/planet/:name" element={<PlanetDetail />} />
