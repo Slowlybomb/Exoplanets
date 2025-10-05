@@ -1,8 +1,8 @@
 import { useRef, RefObject, useState, useEffect } from "react";
 
-const spatialScale = 7;
+const spatialScale = 6;
 const sizeScale = 2;
-const maxZoom= 0.8;
+const maxZoom = 0.8;
 const minZoom = 2;
 
 enum KeplerObjectType {
@@ -54,7 +54,7 @@ function randomNormal(mean = 0, stdDev = 1): number {
 }
 
 function generateRandomStars(n: number): Star[] {
-    return Array.from({length: n}, (_, i) => {
+    return Array.from({ length: n }, (_, i) => {
         const ra = Math.random() * 360; // 0 - 360°
         let dec = randomNormal(0, 30); // cluster around 0°
         dec = Math.max(-90, Math.min(90, dec));
@@ -71,7 +71,7 @@ function generateRandomStars(n: number): Star[] {
     });
 }
 
-const sampleStars: Star[] = generateRandomStars(9000);
+const sampleStars: Star[] = generateRandomStars(500);
 
 function teffToColor(teff: number) {
     // B-V = (5040/Teff) - 0.5
@@ -106,12 +106,12 @@ function teffToColor(teff: number) {
 
 
 
-export default function StarMap({stars = sampleStars }: GalaxyMapProps) {
+export default function StarMap({ stars = sampleStars }: GalaxyMapProps) {
     const canvasRef: RefObject<HTMLCanvasElement> = useRef<HTMLCanvasElement>(null);
     const containerRef = useRef<HTMLDivElement>(null);
     const [canvasSize, setCanvasSize] = useState({ width: 1000, height: 600 });
     const [hoveredStar, setHoveredStar] = useState<Star | null>(null);
-    const [pan, setPan] = useState({ x: canvasSize.width/canvasSize.height, y: canvasSize.height/canvasSize.width });
+    const [pan, setPan] = useState({ x: canvasSize.width / 2, y: canvasSize.height / 2 });
     const [zoom, setZoom] = useState(1);
     const [isDragging, setIsDragging] = useState(false);
     const [lastPos, setLastPos] = useState({ x: 0, y: 0 });
@@ -219,7 +219,7 @@ export default function StarMap({stars = sampleStars }: GalaxyMapProps) {
             const mouseX = e.clientX - rect.left;
             const mouseY = e.clientY - rect.top;
 
-            const scaleFactor = e.deltaY > 0 ? 0.98 : 10.2;
+            const scaleFactor = e.deltaY > 0 ? 0.98 : 1.02;
 
             setZoom(prevZoom => {
                 const newZoom = Math.max(maxZoom, Math.min(minZoom, prevZoom * scaleFactor));
@@ -275,7 +275,6 @@ export default function StarMap({stars = sampleStars }: GalaxyMapProps) {
 
         const hoverStar = stars.find(star => {
             const { x, y } = mapCoords(star.ra, star.dec, canvasSize.width, canvasSize.height, spatialScale);
-            console.log(canvasSize)
             const radius = normaliseRadius(star.srad);
             return Math.hypot(mouseX - x, mouseY - y) <= radius;
         });
@@ -350,74 +349,53 @@ export default function StarMap({stars = sampleStars }: GalaxyMapProps) {
                     <div
                         style={{
                             position: "absolute",
-                            top: hoveredStar ? mapCoords(hoveredStar.ra, hoveredStar.dec, canvasSize.width, canvasSize.height, spatialScale).y * zoom + pan.y - 10 : 0,
-                            left: hoveredStar ? mapCoords(hoveredStar.ra, hoveredStar.dec, canvasSize.width, canvasSize.height, spatialScale).x * zoom + pan.x : 0,
-                            background: "rgba(0,0,0,0.7)",
+                            top: mapCoords(hoveredStar.ra, hoveredStar.dec, canvasSize.width, canvasSize.height, spatialScale).y * zoom + pan.y - 10,
+                            left: mapCoords(hoveredStar.ra, hoveredStar.dec, canvasSize.width, canvasSize.height, spatialScale).x * zoom + pan.x,
+                            background: "rgba(0, 0, 0, 0.75)",
                             color: "white",
                             font: "12px monospace",
-                            padding: "5px 10px",
-                            borderRadius: "3px",
+                            padding: "8px 12px",
+                            borderRadius: "6px",
                             transform: "translate(-50%, -100%)",
-                            pointerEvents: "none"
+                            pointerEvents: "none",
+                            minWidth: "220px",
+                            maxWidth: "280px"
                         }}
                     >
-                        <h1 style={{textAlign: 'center', width: "100%", fontWeight: "bold"}}>Star {hoveredStar.kepid}</h1>
+                        <h2 style={{ textAlign: "center", width: "100%", fontWeight: "bold", marginBottom: "6px" }}>Star {hoveredStar.kepid}</h2>
                         <div
                             style={{
-                            top: 10,
-                                right: 10,
-                                background: "rgba(0,0,0,0.7)",
-                                color: "white",
-                                font: "12px monospace",
-                                padding: "5px 10px",
-                                borderRadius: "3px",
-                                display: 'grid',
-                                gridTemplateColumns: '120px 80px',
-                                gap: '0px',
-                                textAlign: 'right'
+                                display: "grid",
+                                gridTemplateColumns: "140px 1fr",
+                                gap: "2px 8px",
+                                textAlign: "right",
+                                marginBottom: "6px"
                             }}
                         >
                             <span>Declination:</span>
                             <span>{hoveredStar.dec.toFixed(2)}°</span>
                             <span>Right Ascension:</span>
                             <span>{hoveredStar.ra.toFixed(2)}°</span>
-                            <span>Kepler-Band:</span>
+                            <span>Kepler magnitude:</span>
                             <span>{hoveredStar.kepmag.toFixed(2)} mag</span>
                             <span>Temperature:</span>
-                            <span>{hoveredStar.teff.toFixed(0)}K</span>
+                            <span>{hoveredStar.teff.toFixed(0)} K</span>
                         </div>
                         <div>
-                            <b>KOIs:</b>
-                            <div
-                                style={{
-                                    top: 10,
-                                    right: 10,
-                                    background: "rgba(0,0,0,0.7)",
-                                    color: "white",
-                                    font: "12px monospace",
-                                    padding: "5px 10px",
-                                    borderRadius: "3px",
-                                    display: 'grid',
-                                    gridTemplateColumns: '90px 110px',
-                                    gap: '0px',
-                                    textAlign: 'right'
-                                }}
-                            >
-                                <span>Kepler-227 c</span>
-                                <span>CONFIRMED</span>
-                                <span>Kepler-227 d</span>
-                                <span>FALSE_POSITIVE</span>
-                            </div>
+                            <strong>KOIs:</strong>
+                            {hoveredStar.keplerObjects.size > 0 ? (
+                                <ul style={{ listStyle: "none", margin: "4px 0 0", padding: 0, display: "grid", gap: "2px" }}>
+                                    {Array.from(hoveredStar.keplerObjects.entries()).map(([koi, disposition]) => (
+                                        <li key={koi} style={{ display: "flex", justifyContent: "space-between", gap: "12px" }}>
+                                            <span>{koi}</span>
+                                            <span>{disposition}</span>
+                                        </li>
+                                    ))}
+                                </ul>
+                            ) : (
+                                <p style={{ margin: "4px 0 0" }}>No recorded KOIs.</p>
+                            )}
                         </div>
-
-                    </div>
-                )}
-
-                {hoveredStar && (
-                    <div
-
-                    >
-
                     </div>
                 )}
             </div>
