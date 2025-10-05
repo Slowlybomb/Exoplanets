@@ -137,8 +137,8 @@ export default function StarMap({}: GalaxyMapProps) {
     const containerRef = useRef<HTMLDivElement>(null);
     const [canvasSize, setCanvasSize] = useState({ width: 1000, height: 600 });
     const [hoveredStar, setHoveredStar] = useState<Star | null>(null);
-    const [pan, setPan] = useState({ x: canvasSize.width/canvasSize.height, y: canvasSize.height/canvasSize.width });
-    const [zoom, setZoom] = useState(1);
+    const [pan, setPan] = useState({ x: canvasSize.width/16, y: canvasSize.height/16 });
+    const [zoom, setZoom] = useState(0.06);
     const [isDragging, setIsDragging] = useState(false);
     const [lastPos, setLastPos] = useState({ x: 0, y: 0 });
     const [currentPosition, setCurrentPosition] = useState<{ ra: number, dec: number } | null>(null);
@@ -232,7 +232,7 @@ export default function StarMap({}: GalaxyMapProps) {
 
                 ctx.fillStyle = color;
                 ctx.beginPath();
-                ctx.arc(x, y, radius * 0.8 * brightness, 0, Math.PI * 2);
+                ctx.arc(x, y, radius * brightness, 0, Math.PI * 2);
                 ctx.fill();
             });
 
@@ -301,13 +301,20 @@ export default function StarMap({}: GalaxyMapProps) {
             return;
         }
 
-        const mouseX = (e.clientX - rect.left - pan.x) / zoom;
-        const mouseY = (e.clientY - rect.top - pan.y) / zoom;
+        // Calculate the scale factor between canvas internal size and displayed size
+        const scaleX = canvasSize.width / rect.width;
+        const scaleY = canvasSize.height / rect.height;
+
+        // Get mouse position in canvas coordinates (accounting for CSS scaling)
+        const canvasMouseX = (e.clientX - rect.left) * scaleX;
+        const canvasMouseY = (e.clientY - rect.top) * scaleY;
+
+        const mouseX = (canvasMouseX - pan.x) / zoom;
+        const mouseY = (canvasMouseY - pan.y) / zoom;
 
         const ra = (mouseX / canvasSize.width) * 360;
         const dec = 90 - ((mouseY / canvasSize.height) * 180);
         setCurrentPosition({ ra, dec });
-
 
         const hoverStar = stars.find(star => {
             const { x, y } = mapCoordsDynamic(star, bounds, canvasSize.width, canvasSize.height, spatialScale);
@@ -326,7 +333,7 @@ export default function StarMap({}: GalaxyMapProps) {
                 </span>
                 <h1 className="text-3xl font-semibold text-brand-white sm:text-4xl lg:text-5xl">Star Map</h1>
                 <p className="max-w-2xl text-base text-brand-slate/70 sm:text-lg">
-                    Explore all the known stars found by the Kepler Mission in the KOI Database;
+                    Explore all the known stars found by the Kepler Mission in the KOI Database
                 </p>
             </header>
             <div
@@ -435,14 +442,6 @@ export default function StarMap({}: GalaxyMapProps) {
                                 ))}
                             </div>
                         </div>
-
-                    </div>
-                )}
-
-                {hoveredStar && (
-                    <div
-
-                    >
 
                     </div>
                 )}
