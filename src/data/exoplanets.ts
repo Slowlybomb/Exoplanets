@@ -89,17 +89,28 @@ function median(values: number[]): number | null {
   return sorted[middle];
 }
 
+const SOLAR_EFFECTIVE_TEMP_K = 5778;
+
+function computeBrightnessIndex(temperatureK: number | null): number | null {
+    if (temperatureK === null || temperatureK <= 0) {
+        return null;
+    }
+
+    const ratio = temperatureK / SOLAR_EFFECTIVE_TEMP_K;
+    return Number.isFinite(ratio) ? ratio : null;
+}
+
 const radiusValues = exoplanetRecords
-  .map((record) => record.planetRadiusEarth)
-  .filter((value): value is number => value !== null);
+    .map((record) => record.planetRadiusEarth)
+    .filter((value): value is number => value !== null);
 
 const stellarTempValues = exoplanetRecords
-  .map((record) => record.stellarEffectiveTempK)
-  .filter((value): value is number => value !== null);
+    .map((record) => record.stellarEffectiveTempK)
+    .filter((value): value is number => value !== null);
 
 const brightnessIndexValues = stellarTempValues
-  .map((value) => computeBrightnessIndex(value))
-  .filter((value): value is number => value !== null && Number.isFinite(value));
+    .map((value) => computeBrightnessIndex(value))
+    .filter((value): value is number => value !== null && Number.isFinite(value));
 
 export const exoplanetSummaryStats = {
   totalCatalogued: exoplanetRecords.length,
@@ -120,6 +131,8 @@ export const exoplanetSummaryStats = {
       : null
 };
 
+
+
 export type FeaturedPlanet = {
   name: string;
   disposition: string;
@@ -133,16 +146,9 @@ export type FeaturedPlanet = {
   stellarBrightnessIndex: number | null;
 };
 
-const SOLAR_EFFECTIVE_TEMP_K = 5778;
 
-function computeBrightnessIndex(temperatureK: number | null): number | null {
-  if (temperatureK === null || temperatureK <= 0) {
-    return null;
-  }
 
-  const ratio = temperatureK / SOLAR_EFFECTIVE_TEMP_K;
-  return Number.isFinite(ratio) ? ratio : null;
-}
+
 
 function estimateSemiMajorAxisAu(periodDays: number | null): number | null {
   if (!periodDays || periodDays <= 0) {
