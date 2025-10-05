@@ -127,7 +127,7 @@ export function AppLayout({ children }: AppLayoutProps): JSX.Element {
           />
         ) : null}
 
-        <div className="flex-1">
+        <div className="flex flex-1 flex-col max-h-screen overflow-y-auto">
           <div className="sticky top-0 z-20 border-b border-brand-slate/25 bg-brand-midnight/80 px-4 py-3 backdrop-blur md:hidden">
             <div className="flex items-center justify-between">
               <div>
