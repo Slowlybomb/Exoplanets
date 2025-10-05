@@ -2,9 +2,9 @@ import { useRef, RefObject, useState, useEffect } from "react";
 import {loadStarsFromCsv} from "../utils/KeplerCSVParser";
 import React from "react";
 
-const spatialScale = 10;
-const sizeScale = 2;
-const maxZoom= 0.1;
+const spatialScale = 15;
+const sizeScale = 100;
+const maxZoom= 0.05;
 const minZoom = 2;
 
 let bounds: { minRA: number; maxRA: number; minDec: number; maxDec: number; };
@@ -145,6 +145,8 @@ export default function StarMap({}: GalaxyMapProps) {
     const [currentPosition, setCurrentPosition] = useState<{ ra: number, dec: number } | null>(null);
     const [stars, setStars] = useState<Star[]>([]);
 
+    let needsRedraw = true;
+
     useEffect(() => {
         loadStarsFromCsv("/kepler_data.csv")
             .then((data) => {
@@ -204,6 +206,8 @@ export default function StarMap({}: GalaxyMapProps) {
             const bottomDec = -90;
             const topDec = 90;
 
+
+
             for (let ra = 0; ra <= 360; ra += raStep) {
                 const { x } = mapCoords(ra, 0, canvasSize.width, canvasSize.height, spatialScale);
                 ctx.beginPath();
@@ -224,18 +228,14 @@ export default function StarMap({}: GalaxyMapProps) {
             stars.forEach(star => {
                 const { x, y } = mapCoordsDynamic(star, bounds, canvasSize.width, canvasSize.height, spatialScale);
 
-                const radius = normaliseRadius(star.srad, spatialScale);
+                const radius = normaliseRadius(star.srad, sizeScale);
                 const color = teffToColor(star.teff);
                 const brightness = Math.max(0.1, 1 - (Math.min(Math.max(star.kepmag, 6), 16) - 6) / 10);
 
-                const gradient = ctx.createRadialGradient(x, y, 0, x, y, radius * 2);
+                const gradient = ctx.createRadialGradient(x, y, 0, x, y, radius/2);
                 gradient.addColorStop(0, color);
                 gradient.addColorStop(0.4, color);
                 gradient.addColorStop(1, 'transparent');
-                ctx.fillStyle = gradient;
-                ctx.beginPath();
-                ctx.arc(x, y, radius * 2, 0, Math.PI * 2);
-                ctx.fill();
 
                 ctx.fillStyle = color;
                 ctx.beginPath();
@@ -249,9 +249,11 @@ export default function StarMap({}: GalaxyMapProps) {
 
 
         const render = () => {
-
+            if (!needsRedraw) return;
             drawStars();
+            needsRedraw = false;
             animationFrameId = requestAnimationFrame(render);
+
         };
 
 
@@ -275,6 +277,8 @@ export default function StarMap({}: GalaxyMapProps) {
                 return newZoom;
             });
         };
+
+
 
 
         render();
@@ -318,7 +322,8 @@ export default function StarMap({}: GalaxyMapProps) {
 
         const hoverStar = stars.find(star => {
             const { x, y } = mapCoordsDynamic(star, bounds, canvasSize.width, canvasSize.height, spatialScale);
-            const radius = normaliseRadius(star.srad);
+            const radius = normaliseRadius(star.srad, sizeScale);
+            return Math.hypot(mouseX - x, mouseY - y) <= radius;
             return Math.hypot(mouseX - x, mouseY - y) <= radius;
         });
 
@@ -327,6 +332,7 @@ export default function StarMap({}: GalaxyMapProps) {
 
     const handleWheel = (e: React.WheelEvent<HTMLCanvasElement>) => {
         e.preventDefault();
+        needsRedraw = true;
         const rect = canvasRef.current?.getBoundingClientRect();
         if (!rect) return;
 
@@ -340,7 +346,9 @@ export default function StarMap({}: GalaxyMapProps) {
             y: mouseY - (mouseY - prev.y) * scaleFactor
         }));
 
-        setZoom(prev => Math.max(maxZoom, Math.min(minZoom, prev * scaleFactor)));
+        setZoom(prev => (
+
+            Math.max(maxZoom, Math.min(minZoom, prev * scaleFactor))));
     };
 
 
@@ -396,7 +404,7 @@ export default function StarMap({}: GalaxyMapProps) {
                         style={{
                             position: "absolute",
                             top: bounds ? mapCoordsDynamic(hoveredStar, bounds, canvasSize.width, canvasSize.height, spatialScale).y * zoom + pan.y : 0,
-                            left: bounds ? mapCoordsDynamic(hoveredStar, bounds, canvasSize.width, canvasSize.height, spatialScale).x * zoom + pan.z : 0,
+                            left: bounds ? mapCoordsDynamic(hoveredStar, bounds, canvasSize.width, canvasSize.height, spatialScale).x * zoom + pan.x : 0,
                             background: "rgba(0,0,0,0.7)",
                             color: "white",
                             font: "12px monospace",
