@@ -1,9 +1,14 @@
 import { useRef, RefObject, useState, useEffect } from "react";
+import {loadStarsFromCsv} from "../utils/KeplerCSVParser";
+import React from "react";
 
-const spatialScale = 7;
+const spatialScale = 10;
 const sizeScale = 2;
-const maxZoom= 0.8;
+const maxZoom= 0.1;
 const minZoom = 2;
+
+let bounds: { minRA: number; maxRA: number; minDec: number; maxDec: number; };
+
 
 enum KeplerObjectType {
     CONFIRMED = "CONFIRMED",
@@ -104,9 +109,31 @@ function teffToColor(teff: number) {
     return `rgb(${Math.floor(r * 255)},${Math.floor(g * 255)},${Math.floor(b * 255)})`;
 }
 
+function getBounds(stars: Star[]) {
+    const raValues = stars.map(s => s.ra);
+    const decValues = stars.map(s => s.dec);
+
+    const minRA = Math.min(...raValues);
+    const maxRA = Math.max(...raValues);
+    const minDec = Math.min(...decValues);
+    const maxDec = Math.max(...decValues);
+
+    return { minRA, maxRA, minDec, maxDec };
+}
 
 
-export default function StarMap({stars = sampleStars }: GalaxyMapProps) {
+function mapCoordsDynamic(star: Star, bounds: {minRA: number, maxRA: number, minDec: number, maxDec: number}, width: number, height: number, scale = 1) {
+    const { minRA, maxRA, minDec, maxDec } = bounds;
+
+    const x = ((star.ra - minRA) / (maxRA - minRA)) * width * scale;
+    const y = ((maxDec - star.dec) / (maxDec - minDec)) * height * scale; // flip Dec for canvas y
+
+    return { x, y };
+}
+
+
+
+export default function StarMap({}: GalaxyMapProps) {
     const canvasRef: RefObject<HTMLCanvasElement> = useRef<HTMLCanvasElement>(null);
     const containerRef = useRef<HTMLDivElement>(null);
     const [canvasSize, setCanvasSize] = useState({ width: 1000, height: 600 });
@@ -116,6 +143,18 @@ export default function StarMap({stars = sampleStars }: GalaxyMapProps) {
     const [isDragging, setIsDragging] = useState(false);
     const [lastPos, setLastPos] = useState({ x: 0, y: 0 });
     const [currentPosition, setCurrentPosition] = useState<{ ra: number, dec: number } | null>(null);
+    const [stars, setStars] = useState<Star[]>([]);
+
+    useEffect(() => {
+        loadStarsFromCsv("/kepler_data.csv")
+            .then((data) => {
+                console.log(`Loaded ${data.length} unique stars`);
+                console.log("First star:", data[0]);
+                setStars(data);
+                bounds = getBounds(data)
+            })
+            .catch(console.error);
+    }, []);
 
     useEffect(() => {
         const container = containerRef.current;
@@ -180,12 +219,14 @@ export default function StarMap({stars = sampleStars }: GalaxyMapProps) {
                 ctx.lineTo(mapCoords(rightRA, 0, canvasSize.width, canvasSize.height, spatialScale).x, y);
                 ctx.stroke();
             }
-            // Stars
-            stars.forEach((star) => {
-                const { x, y } = mapCoords(star.ra, star.dec, canvasSize.width, canvasSize.height, spatialScale);
-                const radius = normaliseRadius(star.srad, sizeScale);
+
+
+            stars.forEach(star => {
+                const { x, y } = mapCoordsDynamic(star, bounds, canvasSize.width, canvasSize.height, spatialScale);
+
+                const radius = normaliseRadius(star.srad, spatialScale);
                 const color = teffToColor(star.teff);
-                const brightness = Math.max(0.1, 1 - star.kepmag / 6);
+                const brightness = Math.max(0.1, 1 - (Math.min(Math.max(star.kepmag, 6), 16) - 6) / 10);
 
                 const gradient = ctx.createRadialGradient(x, y, 0, x, y, radius * 2);
                 gradient.addColorStop(0, color);
@@ -201,6 +242,7 @@ export default function StarMap({stars = sampleStars }: GalaxyMapProps) {
                 ctx.arc(x, y, radius * 0.8 * brightness, 0, Math.PI * 2);
                 ctx.fill();
             });
+
 
             ctx.restore();
         };
@@ -273,9 +315,9 @@ export default function StarMap({stars = sampleStars }: GalaxyMapProps) {
         const dec = 90 - ((mouseY / canvasSize.height) * 180);
         setCurrentPosition({ ra, dec });
 
+
         const hoverStar = stars.find(star => {
-            const { x, y } = mapCoords(star.ra, star.dec, canvasSize.width, canvasSize.height, spatialScale);
-            console.log(canvasSize)
+            const { x, y } = mapCoordsDynamic(star, bounds, canvasSize.width, canvasSize.height, spatialScale);
             const radius = normaliseRadius(star.srad);
             return Math.hypot(mouseX - x, mouseY - y) <= radius;
         });
@@ -301,6 +343,7 @@ export default function StarMap({stars = sampleStars }: GalaxyMapProps) {
         setZoom(prev => Math.max(maxZoom, Math.min(minZoom, prev * scaleFactor)));
     };
 
+
     return (
         <main className="mx-auto flex w-full max-w-6xl flex-col gap-8 px-4 py-10 sm:px-6 sm:py-12 lg:px-10 lg:py-16">
             <header className="space-y-4">
@@ -313,6 +356,7 @@ export default function StarMap({stars = sampleStars }: GalaxyMapProps) {
                 </p>
             </header>
             <div
+
                 ref={containerRef}
                 style={{
                 position: "relative",
@@ -347,11 +391,12 @@ export default function StarMap({stars = sampleStars }: GalaxyMapProps) {
                 />
 
                 {hoveredStar && (
+
                     <div
                         style={{
                             position: "absolute",
-                            top: hoveredStar ? mapCoords(hoveredStar.ra, hoveredStar.dec, canvasSize.width, canvasSize.height, spatialScale).y * zoom + pan.y - 10 : 0,
-                            left: hoveredStar ? mapCoords(hoveredStar.ra, hoveredStar.dec, canvasSize.width, canvasSize.height, spatialScale).x * zoom + pan.x : 0,
+                            top: bounds ? mapCoordsDynamic(hoveredStar, bounds, canvasSize.width, canvasSize.height, spatialScale).y * zoom + pan.y : 0,
+                            left: bounds ? mapCoordsDynamic(hoveredStar, bounds, canvasSize.width, canvasSize.height, spatialScale).x * zoom + pan.z : 0,
                             background: "rgba(0,0,0,0.7)",
                             color: "white",
                             font: "12px monospace",
@@ -403,10 +448,18 @@ export default function StarMap({stars = sampleStars }: GalaxyMapProps) {
                                     textAlign: 'right'
                                 }}
                             >
-                                <span>Kepler-227 c</span>
-                                <span>CONFIRMED</span>
-                                <span>Kepler-227 d</span>
-                                <span>FALSE_POSITIVE</span>
+                                {Array.from(hoveredStar.keplerObjects.entries()).map(([koiId, type]) => (
+                                    <React.Fragment key={koiId}>
+                                        <span>{koiId}</span>
+                                        <span style={{
+                                            color: type === KeplerObjectType.CONFIRMED ? '#4ade80' :
+                                                type === KeplerObjectType.CANDIDATE ? '#fbbf24' :
+                                                    type === KeplerObjectType.FALSE_POSITIVE ? '#ef4444' : '#94a3b8'
+                                        }}>
+                                            {type.replace('_', ' ')}
+                                        </span>
+                                    </React.Fragment>
+                                ))}
                             </div>
                         </div>
 
