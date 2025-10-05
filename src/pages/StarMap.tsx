@@ -149,7 +149,7 @@ export default function StarMap({ stars: providedStars }: GalaxyMapProps) {
     const containerRef = useRef<HTMLDivElement>(null);
     const [canvasSize, setCanvasSize] = useState({ width: 1000, height: 600 });
     const [hoveredStar, setHoveredStar] = useState<Star | null>(null);
-    const [pan, setPan] = useState({ x: canvasSize.width / 2, y: canvasSize.height / 2 });
+    const [pan, setPan] = useState({ x: canvasSize.width / 16, y: canvasSize.height / 16 });
     const [zoom, setZoom] = useState(1);
     const [isDragging, setIsDragging] = useState(false);
     const [lastPos, setLastPos] = useState({ x: 0, y: 0 });
