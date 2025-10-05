@@ -7,11 +7,28 @@ from pathlib import Path
 from flask import Flask, jsonify, render_template, request
 from flask_cors import CORS
 
+try:  # Optional dependency from backend_api branch
+    import joblib  # type: ignore
+except Exception:  # pragma: no cover
+    joblib = None
+
+try:  # Optional dependency from backend_api branch
+    import numpy as np  # type: ignore
+except Exception:  # pragma: no cover
+    np = None
+
 app = Flask(__name__)
 CORS(app)
 
 SAMPLE_PATH = Path(__file__).with_name("test_data.json")
 MODEL_PARAMS_PATH = Path(__file__).with_name("lightweight_model.json")
+JOBLIB_MODEL_PATH = Path(__file__).with_name("model_test_1.joblib")
+
+_JOBLIB_MODEL = None
+
+ENGINE_LIGHTWEIGHT = "lightweight"
+ENGINE_JOBLIB = "joblib"
+SUPPORTED_ENGINES = {ENGINE_LIGHTWEIGHT, ENGINE_JOBLIB}
 
 if not MODEL_PARAMS_PATH.exists():
     raise RuntimeError(
@@ -33,6 +50,18 @@ def load_sample() -> dict:
         sample = json.load(f)
 
     return {key: value for key, value in sample.items() if key in FEATURE_KEYS}
+
+
+def get_joblib_model():
+    global _JOBLIB_MODEL
+    if joblib is None:
+        return None
+    if _JOBLIB_MODEL is None and JOBLIB_MODEL_PATH.exists():
+        try:
+            _JOBLIB_MODEL = joblib.load(JOBLIB_MODEL_PATH)
+        except Exception:  # pragma: no cover - cache best effort
+            _JOBLIB_MODEL = None
+    return _JOBLIB_MODEL
 
 
 def prepare_payload(payload: dict) -> dict[str, float]:
@@ -70,16 +99,59 @@ def predict_probability(features: dict[str, float]) -> float:
     return sigmoid(total)
 
 
-def build_prediction(prepared_features: dict[str, float]) -> dict[str, object]:
+def build_lightweight_prediction(prepared_features: dict[str, float]) -> dict[str, object]:
     probability = predict_probability(prepared_features)
     return {
         "prediction": int(probability >= 0.5),
         "probability": probability,
         "features": prepared_features,
+        "engine": ENGINE_LIGHTWEIGHT,
     }
 
 
-def classify_batch(payloads: list[dict]) -> list[dict[str, object]]:
+def build_joblib_prediction(prepared_features: dict[str, float], model) -> dict[str, object]:
+    if np is not None:
+        feature_vector = np.array([[prepared_features[key] for key in FEATURE_KEYS]], dtype=float)
+    else:
+        feature_vector = [[prepared_features[key] for key in FEATURE_KEYS]]
+
+    raw_prediction = model.predict(feature_vector)[0]
+    try:
+        prediction_value = int(raw_prediction)
+    except (TypeError, ValueError):
+        prediction_value = int(bool(raw_prediction))
+
+    probability_value: float | None = None
+    if hasattr(model, "predict_proba"):
+        try:
+            proba = model.predict_proba(feature_vector)[0]
+            if len(proba) > 1:
+                probability_value = float(proba[1])
+            else:
+                probability_value = float(proba[0])
+        except Exception:  # pragma: no cover - downstream model may not support proba
+            probability_value = None
+
+    result: dict[str, object] = {
+        "prediction": prediction_value,
+        "features": prepared_features,
+        "engine": ENGINE_JOBLIB,
+    }
+    if probability_value is not None and math.isfinite(probability_value):
+        result["probability"] = probability_value
+    return result
+
+
+def run_inference(prepared_features: dict[str, float], engine: str) -> dict[str, object]:
+    if engine == ENGINE_JOBLIB:
+        model = get_joblib_model()
+        if model is None:
+            raise ValueError("Joblib model is not available on the server.")
+        return build_joblib_prediction(prepared_features, model)
+    return build_lightweight_prediction(prepared_features)
+
+
+def classify_batch(payloads: list[dict], engine: str) -> list[dict[str, object]]:
     results: list[dict[str, object]] = []
     for index, payload in enumerate(payloads):
         if not isinstance(payload, dict):
@@ -92,7 +164,12 @@ def classify_batch(payloads: list[dict]) -> list[dict[str, object]]:
             results.append({"index": index, "error": str(exc)})
             continue
 
-        prediction = build_prediction(prepared)
+        try:
+            prediction = run_inference(prepared, engine)
+        except ValueError as exc:
+            results.append({"index": index, "error": str(exc)})
+            continue
+
         results.append({"index": index, **prediction})
 
     return results
@@ -151,6 +228,19 @@ def load_batch_from_file(file_storage) -> list[dict]:
     raise ValueError("Unsupported file type. Upload a .json or .csv file.")
 
 
+def choose_engine(raw_engine: str | None) -> str:
+    engine = (raw_engine or "").strip().lower()
+    if not engine:
+        return ENGINE_LIGHTWEIGHT
+    if engine not in SUPPORTED_ENGINES:
+        raise ValueError(
+            f"Unsupported engine '{raw_engine}'. Valid options are: {', '.join(sorted(SUPPORTED_ENGINES))}."
+        )
+    if engine == ENGINE_JOBLIB and get_joblib_model() is None:
+        raise ValueError("Joblib model requested but it is not available on the server.")
+    return engine
+
+
 @app.route("/")
 def mainpage():
     return render_template("index.html")
@@ -158,37 +248,48 @@ def mainpage():
 
 @app.route("/exoplanet", methods=["GET", "POST"])
 def exoplanet():
+    engine_param = request.args.get("engine")
+    try:
+        engine = choose_engine(engine_param)
+    except ValueError as exc:
+        return jsonify({"error": str(exc)}), 400
+
     if request.method == "GET":
         sample = load_sample()
         prepared = prepare_payload(sample)
-        return jsonify(build_prediction(prepared))
+        try:
+            prediction = run_inference(prepared, engine)
+        except ValueError as exc:
+            return jsonify({"error": str(exc)}), 400
+        return jsonify(prediction)
 
     uploaded_file = request.files.get("file")
     if uploaded_file:
         try:
             batch_payloads = load_batch_from_file(uploaded_file)
-            results = classify_batch(batch_payloads)
+            results = classify_batch(batch_payloads, engine)
         except ValueError as exc:
             return jsonify({"error": str(exc)}), 400
-        return jsonify({"results": results})
+        return jsonify({"results": results, "engine": engine})
 
     payload = request.get_json(silent=True)
     if payload is None:
         return jsonify({"error": "Request must include JSON data or an uploaded file."}), 400
 
     if isinstance(payload, list):
-        results = classify_batch(payload)
-        return jsonify({"results": results})
+        results = classify_batch(payload, engine)
+        return jsonify({"results": results, "engine": engine})
 
     if not isinstance(payload, dict):
         return jsonify({"error": "JSON payload must be an object or an array of objects."}), 400
 
     try:
         prepared = prepare_payload(payload)
+        prediction = run_inference(prepared, engine)
     except ValueError as exc:
         return jsonify({"error": str(exc)}), 400
 
-    return jsonify(build_prediction(prepared))
+    return jsonify(prediction)
 
 
 if __name__ == "__main__":
