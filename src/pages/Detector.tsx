@@ -6,7 +6,7 @@ import { getAllFeaturedPlanets, type FeaturedPlanet } from "../data/exoplanets";
 
 type PredictionResponse = {
   prediction: number;
-  features: Record<string, number>;
+  features: Record<string, number | undefined>;
   error?: string;
 };
 
@@ -138,7 +138,7 @@ export default function Detector(): JSX.Element {
     }
 
     const koiScore = result.features.koi_score;
-    if (!Number.isFinite(koiScore)) {
+    if (typeof koiScore !== "number" || !Number.isFinite(koiScore)) {
       return undefined;
     }
 

@@ -11,7 +11,7 @@ CORS(app)
 MODEL_PATH = Path(__file__).with_name("model_test_1.joblib")
 SAMPLE_PATH = Path(__file__).with_name("test_data.json")
 
-# Columns that leak the target label and should never reach the model
+# Columns that leak the target label and should never reach the user interface payload
 LEAKAGE_KEYS = {
     "kepler_name",
     "kepoi_name",
@@ -30,7 +30,8 @@ LEAKAGE_KEYS = {
     "koi_score"
 }
 
-FEATURE_KEYS = [
+MODEL_FEATURE_KEYS = [
+    "koi_score",
     "koi_period",
     "koi_period_err1",
     "koi_period_err2",
@@ -61,10 +62,13 @@ FEATURE_KEYS = [
     "koi_slogg",
     "koi_slogg_err1",
     "koi_slogg_err2",
+    "koi_srad",
     "koi_srad_err1",
     "koi_srad_err2",
     "ra"
 ]
+
+FEATURE_KEYS = [key for key in MODEL_FEATURE_KEYS if key not in LEAKAGE_KEYS]
 
 model = joblib.load(MODEL_PATH)
 
@@ -88,7 +92,10 @@ def prepare_payload(payload: dict) -> tuple[np.ndarray, dict]:
         except (ValueError, TypeError):
             raise ValueError("All feature values must be numeric.")
 
-    vector = [prepared_features[key] for key in FEATURE_KEYS]
+    vector = [
+        0.0 if key in LEAKAGE_KEYS else prepared_features[key]
+        for key in MODEL_FEATURE_KEYS
+    ]
     return np.array([vector]), prepared_features
 
 
