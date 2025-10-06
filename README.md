@@ -117,7 +117,7 @@ Exoplanets/
 - Tailwind CSS powers the interface (`src/styles/global.css`). Use utility classes for layout tweaks, or extend theme tokens in `tailwind.config.js` for consistent colors and shadows.
 
 ## Troubleshooting
-- If `npm install` fails due to incompatible Node version, switch to Node 18+ and reinstall, or run `npm ci`.
+- If `npm install` fails due to incompatible Node version, switch to Node 18+ and reinstall, or try running `npm ci`.
 - When `npm run dev` is already bound to a port, either stop the existing process or run `npm run dev -- --port 5174`.
 - For TypeScript or ESLint errors, run `npm run lint` to see details and apply fixes in the referenced files.
 - Ensure the browser supports WebGL for the orbit simulation; fallback copy is still shown if the KOI list is empty.
