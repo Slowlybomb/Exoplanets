@@ -16,17 +16,17 @@ npm --version
 
 ## Install Dependencies
 1. Clone or download the repository and open it in your terminal.
-2. ```bash
-   git clone https://github.com/Slowlybomb/Exoplanets.git
-   ```
+```bash
+git clone https://github.com/Slowlybomb/Exoplanets.git
+```
 3. Install node packages (creates `node_modules/` locally):
-   ```bash
-   npm install
-   ```
+```bash
+npm install
+```
 4. Install pip packages
-   ```bash
-   pip install scikit-learn flask flask_cors pandas joblib
-   ```
+```bash
+pip install scikit-learn flask flask_cors pandas joblib
+```
 
 ## Running the project
 In one terminal, in the project root directory:
@@ -37,7 +37,6 @@ In a separate terminal, in the backend directory:
 ```bash
 flask run
 ```
-
 
 If you run into permission issues on macOS/Linux, avoid `sudo`; instead, fix your global npm permissions or use a Node version manager.
 
