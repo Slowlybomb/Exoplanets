@@ -5,6 +5,8 @@ Interactive dashboard for exploring NASA Exoplanet Archive KOI statistics—"KOI
 ## Prerequisites
 - Node.js 18 or newer (ships with npm 9+). Use [`nvm`](https://github.com/nvm-sh/nvm) or [`fnm`](https://github.com/Schniz/fnm) if you manage multiple versions.
 - Git (optional, but recommended for pulling updates and collaborating).
+- Python 13.12+ with pip
+
 
 Verify your tooling:
 ```bash
@@ -14,10 +16,27 @@ npm --version
 
 ## Install Dependencies
 1. Clone or download the repository and open it in your terminal.
-2. Install packages (creates `node_modules/` locally):
-   ```bash
-   npm install
-   ```
+```bash
+git clone https://github.com/Slowlybomb/Exoplanets.git
+```
+3. Install node packages (creates `node_modules/` locally):
+```bash
+npm install
+```
+4. Install pip packages
+```bash
+pip install scikit-learn flask flask_cors pandas joblib
+```
+
+## Running the project
+In one terminal, in the project root directory:
+```bash
+npm run dev
+```
+In a separate terminal, in the backend directory:
+```bash
+flask run
+```
 
 If you run into permission issues on macOS/Linux, avoid `sudo`; instead, fix your global npm permissions or use a Node version manager.
 
@@ -98,7 +117,7 @@ Exoplanets/
 - Tailwind CSS powers the interface (`src/styles/global.css`). Use utility classes for layout tweaks, or extend theme tokens in `tailwind.config.js` for consistent colors and shadows.
 
 ## Troubleshooting
-- If `npm install` fails due to incompatible Node version, switch to Node 18+ and reinstall.
+- If `npm install` fails due to incompatible Node version, switch to Node 18+ and reinstall, or try running `npm ci`.
 - When `npm run dev` is already bound to a port, either stop the existing process or run `npm run dev -- --port 5174`.
 - For TypeScript or ESLint errors, run `npm run lint` to see details and apply fixes in the referenced files.
 - Ensure the browser supports WebGL for the orbit simulation; fallback copy is still shown if the KOI list is empty.
