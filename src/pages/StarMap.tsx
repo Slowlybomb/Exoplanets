@@ -7,6 +7,46 @@ const sizeScale = 100;
 const maxZoom= 10;
 const minZoom = 0.05;
 
+
+const DISPOSITION_DESCRIPTIONS = [
+    { id: "all", label: "All dispositions" },
+    { id: "confirmed", label: "Confirmed" },
+    { id: "candidate", label: "Candidates" }
+] as const;
+
+const SIZE_DESCRIPTIONS = [
+    { id: "sub", label: "small" },
+    { id: "earth", label: "Earth-sized" },
+    { id: "super", label: "large planet" },
+    { id: "giant", label: "gas giant)" }
+] as const;
+
+const KOI_TEMP_DESCRIPTIONS = [
+    { id: "cold", label: "cold" },
+    { id: "temperate", label: "Temperate (260–320 K)" },
+    { id: "hot", label: "Hot" }
+] as const;
+
+const PERIOD_DESCRIPTIONS = [
+    { id: "all", label: "All periods" },
+    { id: "ultra", label: "Ultra-short (<10 d)" },
+    { id: "short", label: "Short (10–100 d)" },
+    { id: "medium", label: "Medium (100–365 d)" },
+    { id: "long", label: "Long (>365 d)" }
+] as const;
+
+const SCORE_DESCRIPTIONS = [
+    { id: "all", label: "A" },
+    { id: "high", label: "Most likely a" },
+    { id: "medium", label: "Potentially a (0.6–0.9)" },
+    { id: "low", label: "Possibly a (<0.6)" }
+] as const;
+
+
+
+
+
+
 let bounds: { minRA: number; maxRA: number; minDec: number; maxDec: number; };
 
 enum KeplerObjectType {
@@ -235,7 +275,6 @@ export default function StarMap({}: GalaxyMapProps) {
                 ctx.arc(x, y, radius * brightness, 0, Math.PI * 2);
                 ctx.fill();
             });
-
 
             ctx.restore();
         };

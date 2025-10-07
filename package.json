@@ -5,7 +5,7 @@
   "type": "module",
   "scripts": {
     "dev": "vite",
-    "build": "vite build & ./backend/run_backend.sh",
+    "build": "vite build & api/run_backend.sh",
     "preview": "vite preview",
     "lint": "eslint ."
   },
