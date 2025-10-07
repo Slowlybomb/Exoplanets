@@ -32,4 +32,4 @@ forest = RandomForestClassifier(n_estimators=100, criterion='gini')
 forest.fit(X_train, y_train)
 y_pred = forest.predict(X_test)
 
-joblib.dump(forest, 'model.joblib')
+joblib.dump(forest, 'model-r.joblib')
