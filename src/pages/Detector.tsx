@@ -20,7 +20,7 @@ type BatchPrediction = {
 
 type FormState = Record<string, string>;
 
-const API_URL = "http://localhost:5000/exoplanet";
+const API_URL = "/exoplanet";
 const FEATURE_FIELDS: Array<{ key: string; label: string; help?: string }> = [
   { key: "koi_period", label: "Orbital Period (days)" },
   { key: "koi_period_err1", label: "Period +σ" },
